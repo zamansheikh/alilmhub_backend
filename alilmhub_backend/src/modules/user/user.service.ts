@@ -79,7 +79,7 @@ const updateUserRole = async (id: string, role: "USER" | "ADMIN") => {
 
 const getMe = async (userId: string) => {
   // If not cached, query the database using lean with virtuals enabled.
-  const user = await User.findById(userId).populate("address").lean({
+  const user = await User.findById(userId).lean({
     virtuals: true,
   });
   if (!user) {

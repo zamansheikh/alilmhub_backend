@@ -375,6 +375,9 @@ const resendOtp = async ({
   if (!isExistUser) {
     throw new AppError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
+  if(reason==="account_verification" && isExistUser.isVerified){
+    throw new AppError(StatusCodes.BAD_REQUEST, "User already verified!");
+  }
 
   //send mail
   const otp = generateOTP();

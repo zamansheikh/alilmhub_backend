@@ -8,7 +8,7 @@ import validateRequest from "../../shared/middlewares/validateRequest";
 const router = express.Router();
 
 // User routes
-router.get("/", UserController.getAllUsers);
+router.get("/get-all-users", UserController.getAllUsers);
 router.get("/me", auth(),UserController.getMe);
 router.get("/:id", UserController.getUserById);
 
