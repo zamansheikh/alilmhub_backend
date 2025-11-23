@@ -2,8 +2,15 @@ import { Types } from "mongoose";
 
 export enum LoginProvider {
   EMAIL = "email",
-
 }
+
+export type TCreateUser = {
+  name: string;
+  email: string;
+  role: string;
+  password: string;
+  loginProvider: LoginProvider;
+};
 
 export type TAuth = {
   _id: Types.ObjectId;
@@ -24,15 +31,14 @@ export type TVerifyEmail = {
 export type TAuthResetPassword = {
   newPassword: string;
 };
-export type TChangePassword={
-  currentPassword:string;
-  newPassword:string;
-}
+export type TChangePassword = {
+  currentPassword: string;
+  newPassword: string;
+};
 
 export type TLoginData = {
   email: string;
   password: string;
   loginProvider: LoginProvider;
-  firstName?: string;
-  lastName?: string;
+  name?: string;
 };

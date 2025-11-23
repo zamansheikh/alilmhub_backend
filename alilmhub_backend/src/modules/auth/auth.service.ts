@@ -8,10 +8,10 @@ import {
   LoginProvider,
   TAuthResetPassword,
   TChangePassword,
+  TCreateUser,
   TLoginData,
   TVerifyEmail,
 } from "./auth.interface";
-import { TBaseUser, UserRole } from "../user/user.interface";
 import { User } from "../user/user.model";
 import { Auth } from "./auth.model";
 import { jwtHelper } from "../../shared/util/jwtHelper";
@@ -24,15 +24,7 @@ import { OtpService } from "../oneTimeCode/otp.service";
 import { ResetToken } from "../resetToken/resetToken.model";
 import { generateCryptoToken } from "../../shared/util/generateCryptoToken";
 import { OneTimeCode } from "../oneTimeCode/otp.model";
-
-export type TCreateUser = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: UserRole;
-  password: string;
-  loginProvider: LoginProvider;
-};
+import { UserRole } from "../user/user.interface";
 
 // signup
 const createUser = async (user: TCreateUser) => {
@@ -63,6 +55,14 @@ const createUser = async (user: TCreateUser) => {
         ]);
       }
 
+      // Validate password for email provider
+      if (user.loginProvider === LoginProvider.EMAIL && !user.password) {
+        throw new AppError(
+          StatusCodes.BAD_REQUEST,
+          "Password is required for email signup"
+        );
+      }
+
       const hashPassword = await bcrypt.hash(
         user.password,
         Number(process.env.BCRYPT_SALT_ROUNDS) || 8
@@ -89,10 +89,9 @@ const createUser = async (user: TCreateUser) => {
       const newUser = await User.create(
         [
           {
-            firstName: user.firstName,
-            lastName: user.lastName,
+            name: user.name,
             email: user.email,
-            role: user.role,
+            role: UserRole.CONTRIBUTOR,
 
             authId: authEntry[0]._id,
           },
@@ -125,12 +124,15 @@ const createUser = async (user: TCreateUser) => {
         theme: "theme-green",
         expiresIn: 30,
       });
-      await OtpService.createOtpEntry({
-        userId: newUser[0]._id.toString(),
-        expireAt: new Date(Date.now() + 30 * 60000),
-        oneTimeCode: otp,
-        reason: "account_verification",
-      }, session);
+      await OtpService.createOtpEntry(
+        {
+          userId: newUser[0]._id.toString(),
+          expireAt: new Date(Date.now() + 30 * 60000),
+          oneTimeCode: otp,
+          reason: "account_verification",
+        },
+        session
+      );
 
       await emailSender.sendEmail(emailHtml);
       return { user: newUser[0], accessToken };
