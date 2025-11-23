@@ -8,12 +8,12 @@ const router: Router = express.Router();
 
 const apiRoutes = [
   {
-    path: "/user",
-    route: UserRoutes,
-  },
-  {
     path: "/auth",
     route: AuthRoutes,
+  },
+  {
+    path: "/user",
+    route: UserRoutes,
   },
   {
     path: "/references",

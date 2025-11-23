@@ -1,30 +1,9 @@
 import { z } from "zod";
+import { LoginProvider } from "./auth.interface";
 
-// Role enums
-export enum CandidateRole {
-  PROFESSIONAL_PLAYER = "Professional Player",
-  AMATEUR_PLAYER = "Amateur Player",
-  HIGH_SCHOOL = "High School",
-  COLLEGE_UNIVERSITY = "College/University",
-  ON_FIELD_STAFF = "On field staff",
-  COACH = "Coach",
-}
 
-export enum EmployerRole {
-  PROFESSIONAL_CLUB = "Professional Club",
-  ACADEMY = "Academy",
-  AMATEUR_CLUB = "Amateur Club",
-  CONSULTING_COMPANY = "Consulting Company",
-  HIGH_SCHOOL = "High School",
-  COLLEGE_UNIVERSITY = "College/University",
-  AGENT = "Agent",
-}
 
-// Combined role enum values for validation
-const allRoles = [
-  ...Object.values(CandidateRole),
-  ...Object.values(EmployerRole),
-] as [string, ...string[]];
+
 
 // Signup validation schema
 const createUserDto = z.object({
@@ -32,12 +11,9 @@ const createUserDto = z.object({
     .object({
       firstName: z.string().min(1, "First name is required"),
       lastName: z.string().min(1, "Last name is required"),
-      email: z.email("Invalid email format")
-      ,
-      role: z.enum(allRoles, "Invalid role selected"),
+      email: z.email("Invalid email format"),
       password: z.string().optional(),
-      loginProvider: z.enum(["linkedin", "email"]),
-      userType: z.enum(["candidate", "employer"]).optional(),
+      loginProvider: z.enum(LoginProvider),
     })
     .strict(),
 });
@@ -48,11 +24,9 @@ const loginUserDto = z.object({
     .object({
       email: z.email("Invalid email format"),
       password: z.string().optional(),
-      loginProvider: z.enum(["linkedin", "email"]),
-      role: z.enum(allRoles, "Invalid role selected").optional(),
+      loginProvider: z.enum(LoginProvider),
       firstName: z.string().optional(),
       lastName: z.string().optional(),
-      userType: z.enum(["candidate", "employer"]).optional(),
     })
     .strict(),
 });

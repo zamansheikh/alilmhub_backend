@@ -10,6 +10,7 @@ export type TAuth = {
   email: string;
   password?: string;
   loginProvider: LoginProvider;
+  lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -32,8 +33,6 @@ export type TLoginData = {
   email: string;
   password: string;
   loginProvider: LoginProvider;
-  role?: string;
   firstName?: string;
   lastName?: string;
-  userType?: string;
 };

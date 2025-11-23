@@ -19,7 +19,7 @@ services:
       dockerfile: Dockerfile.prod
     container_name: alilmhub-backend_prod
     ports:
-      - "5014:5014"
+      - "5016:5014"
     env_file:
       - ./alilmhub_backend/.env.production
     volumes:

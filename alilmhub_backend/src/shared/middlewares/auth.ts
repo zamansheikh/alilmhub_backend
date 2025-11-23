@@ -5,6 +5,7 @@ import config from "../../config";
 
 import { jwtHelper } from "../util/jwtHelper";
 import AppError from "../../errors/AppError";
+import { User } from "../../modules/user/user.model";
 
 const auth =
   (...roles: string[]) =>
@@ -24,18 +25,23 @@ const auth =
             token,
             config.jwt.jwt_secret as Secret
           );
-          console.log(verifyUser);
-          console.log(roles);
+          const requestedUser = await User.findById(verifyUser.id);
+          if (!requestedUser) {
+            throw new AppError(
+              StatusCodes.UNAUTHORIZED,
+              "You are not authorized"
+            );
+          }
           //set user to header
-          req.user = verifyUser;
+          req.user = requestedUser;
           //guard user
-          if (roles.length && !roles.includes(verifyUser.userType)) {
+          if (roles.length && !roles.includes(requestedUser.role)) {
             throw new AppError(
               StatusCodes.FORBIDDEN,
               "You don't have permission to access this api"
             );
           }
-       console.log("passed");
+          console.log("passed");
           next();
         }
     } catch (error) {

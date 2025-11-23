@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import AppError from "../../errors/AppError";
 import {
   OneTimeCodeDto,
@@ -8,7 +9,8 @@ import { TOneTimeCode } from "./otp.interface";
 import { OneTimeCode } from "./otp.model";
 import bcrypt from "bcryptjs";
 const createOtpEntry = async (
-  otpEntry: TCreateOneTimeCodeDto
+  otpEntry: TCreateOneTimeCodeDto,
+  session?: mongoose.ClientSession
 ): Promise<Partial<TOneTimeCode>> => {
   const parseResult = OneTimeCodeDto.createOneTimeCodeDto.safeParse(otpEntry);
   if (!parseResult.success) {
@@ -18,20 +20,25 @@ const createOtpEntry = async (
 const oldOtpEntry = await OneTimeCode.findOneAndDelete({
     userId: parseResult.data.userId,
     reason: parseResult.data.reason,
-  });
+  }).session(session || null);
 
   const hashedOtp = bcrypt.hashSync(parseResult.data.oneTimeCode, 10);
 
-  const newOtpEntry = await OneTimeCode.create({
-    userId: parseResult.data.userId,
-    reason: parseResult.data.reason,
-    oneTimeCodeHash: hashedOtp,
-    expireAt: parseResult.data.expireAt,
-  });
-  if (!newOtpEntry) {
+  const newOtpEntry = await OneTimeCode.create(
+    [
+      {
+        userId: parseResult.data.userId,
+        reason: parseResult.data.reason,
+        oneTimeCodeHash: hashedOtp,
+        expireAt: parseResult.data.expireAt,
+      },
+    ],
+    { session }
+  );
+  if (!newOtpEntry[0]) {
     throw new AppError(500, "Failed to create OTP entry");
   }
-  return newOtpEntry;
+  return newOtpEntry[0];
 };
 
 const validateOtp = async ({

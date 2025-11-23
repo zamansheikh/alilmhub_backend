@@ -18,7 +18,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: alilmhub-backend_dev
     ports:
-      - "5013:5013"
+      - "5016:5014"
     env_file:
       - ./alilmhub_backend/.env.development
     volumes:

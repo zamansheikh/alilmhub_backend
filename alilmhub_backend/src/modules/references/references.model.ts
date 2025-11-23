@@ -6,7 +6,6 @@ const referenceSchema = new Schema<TReferences>(
     slug: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     type: {

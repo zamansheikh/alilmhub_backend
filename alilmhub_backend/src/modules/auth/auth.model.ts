@@ -7,18 +7,16 @@ const authSchema = new Schema<TAuth>(
     password: { type: String, required: true },
     loginProvider: {
       type: String,
-      enum: ["linkedin", "email"],
+      enum: ["email"],
       required: true,
     },
-
+    lastLoginAt: { type: Date ,required:false, default:null},
+    
   },
   {
     timestamps: true,
     versionKey: false,
   }
 );
-
-
-
 
 export const Auth = model<TAuth>("Auth", authSchema);

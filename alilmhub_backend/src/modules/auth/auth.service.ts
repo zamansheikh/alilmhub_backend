@@ -11,7 +11,7 @@ import {
   TLoginData,
   TVerifyEmail,
 } from "./auth.interface";
-import {  TBaseUser, UserRole } from "../user/user.interface";
+import { TBaseUser, UserRole } from "../user/user.interface";
 import { User } from "../user/user.model";
 import { Auth } from "./auth.model";
 import { jwtHelper } from "../../shared/util/jwtHelper";
@@ -34,114 +34,108 @@ export type TCreateUser = {
   loginProvider: LoginProvider;
 };
 
-
 // signup
 const createUser = async (user: TCreateUser) => {
   // Use transaction to prevent race conditions
   const session = await mongoose.startSession();
   try {
-    await session.withTransaction(
-      async () => {
-        const existingUser = await User.findOne({ email: user.email }).session(
-          session
+    const result = await session.withTransaction(async () => {
+      const existingUser = await User.findOne({ email: user.email }).session(
+        session
+      );
+
+      // Email provider flow
+      if (existingUser && existingUser.isVerified === true) {
+        throw new AppError(
+          StatusCodes.BAD_REQUEST,
+          "User already exists with email"
         );
+      }
 
-   
-          // Email provider flow
-          if (existingUser && existingUser.isVerified === true) {
-            throw new AppError(
-              StatusCodes.BAD_REQUEST,
-              "User already exists with email"
-            );
-          }
+      if (existingUser?.isVerified === false) {
+        // Delete the existing unverified user and auth
+        await Promise.all([
+          User.findByIdAndDelete(existingUser._id).session(session),
+          Auth.findByIdAndDelete(existingUser.authId).session(session),
+          OneTimeCode.findOneAndDelete({
+            userId: existingUser._id.toString(),
+          }).session(session),
+        ]);
+      }
 
-          if (existingUser?.isVerified === false) {
-            // Delete the existing unverified user and auth
-            await Promise.all([
-              User.findByIdAndDelete(existingUser._id).session(session),
-              Auth.findByIdAndDelete(existingUser.authId).session(session),
-              OneTimeCode.findOneAndDelete({
-                userId: existingUser._id.toString(),
-              }).session(session),
-            ]);
-          }
+      const hashPassword = await bcrypt.hash(
+        user.password,
+        Number(process.env.BCRYPT_SALT_ROUNDS) || 8
+      );
 
-          const hashPassword = await bcrypt.hash(
-            user.password,
-            Number(process.env.BCRYPT_SALT_ROUNDS) || 12
-          );
+      const authEntry = await Auth.create(
+        [
+          {
+            email: user.email,
+            password: hashPassword,
+            loginProvider: user.loginProvider || LoginProvider.EMAIL,
+          },
+        ],
+        { session }
+      );
 
-          const authEntry = await Auth.create(
-            [
-              {
-                email: user.email,
-                password: hashPassword,
-                loginProvider: user.loginProvider || LoginProvider.EMAIL,
-              },
-            ],
-            { session }
-          );
+      if (!authEntry[0]) {
+        throw new AppError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          "Auth creation failed"
+        );
+      }
 
-          if (!authEntry[0]) {
-            throw new AppError(
-              StatusCodes.INTERNAL_SERVER_ERROR,
-              "Auth creation failed"
-            );
-          }
+      const newUser = await User.create(
+        [
+          {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
 
-    
+            authId: authEntry[0]._id,
+          },
+        ],
+        { session }
+      );
 
-          const newUser = await User.create(
-            [
-              {
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role,
-           
-                authId: authEntry[0]._id,
-              },
-            ],
-            { session }
-          );
+      if (!newUser[0]) {
+        throw new AppError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          "User creation failed"
+        );
+      }
+      const accessToken = jwtHelper.createToken(
+        {
+          id: newUser[0]._id,
+          role: newUser[0].role,
+          email: newUser[0].email,
+        },
+        (config.jwt.jwt_secret as Secret) || "JWT_SECRET",
+        config.jwt.jwt_expire_in || "1d"
+      );
 
-          if (!newUser[0]) {
-            throw new AppError(
-              StatusCodes.INTERNAL_SERVER_ERROR,
-              "User creation failed"
-            );
-          }
-          const accessToken = jwtHelper.createToken(
-            {
-              id: newUser[0]._id,
-              role: newUser[0].role,
-              email: newUser[0].email,
-            },
-            (config.jwt.jwt_secret as Secret) || "JWT_SECRET",
-            config.jwt.jwt_expire_in || "1d"
-          );
+      const otp = generateOTP();
+      console.log(otp, "otp");
+      const emailHtml = emailTemplate.createAccount({
+        email: newUser[0].email,
+        name: newUser[0].name,
+        otp: otp,
+        theme: "theme-green",
+        expiresIn: 30,
+      });
+      await OtpService.createOtpEntry({
+        userId: newUser[0]._id.toString(),
+        expireAt: new Date(Date.now() + 30 * 60000),
+        oneTimeCode: otp,
+        reason: "account_verification",
+      }, session);
 
-          const otp = generateOTP();
-          console.log(otp, "otp");
-          const emailHtml = emailTemplate.createAccount({
-            email: newUser[0].email,
-            name: newUser[0].name,
-            otp: otp,
-            theme: "theme-green",
-            expiresIn: 30,
-          });
-          await OtpService.createOtpEntry({
-            userId: newUser[0]._id.toString(),
-            expireAt: new Date(Date.now() + 30 * 60000),
-            oneTimeCode: otp,
-            reason: "account_verification",
-          });
-
-          emailSender.sendEmail(emailHtml);
-          return { user: newUser[0], accessToken };
-        }
-      
-    );
+      await emailSender.sendEmail(emailHtml);
+      return { user: newUser[0], accessToken };
+    });
+    return result;
   } finally {
     await session.endSession();
   }
@@ -150,7 +144,6 @@ const createUser = async (user: TCreateUser) => {
 // login
 const loginUser = async (payload: TLoginData) => {
   const { email, password, loginProvider } = payload;
-
 
   if (loginProvider === LoginProvider.EMAIL) {
     if (!password) {
@@ -206,7 +199,7 @@ const forgetPasswordToDB = async (email: string) => {
   };
   const forgetPassword = emailTemplate.resetPassword(value);
 
-  emailSender.sendEmail(forgetPassword);
+  await emailSender.sendEmail(forgetPassword);
 
   //save to DB
   await OtpService.createOtpEntry({
@@ -283,7 +276,6 @@ const resetPasswordToDB = async (
     );
   }
 
-
   const hashPassword = await bcrypt.hash(
     newPassword,
     Number(config.bcrypt_salt_rounds)
@@ -316,7 +308,7 @@ const changePasswordToDB = async (
   user: JwtPayload,
   payload: TChangePassword
 ) => {
-  console.log(user,payload);
+  console.log(user, payload);
   const { currentPassword, newPassword } = payload;
   const isExistUser = await User.findById(user.id).select("authId");
   const authEntry = await Auth.findById(isExistUser?.authId);
@@ -399,11 +391,11 @@ const resendOtp = async ({
   };
   if (reason === "account_verification") {
     const createAccount = emailTemplate.createAccount(value);
-    emailSender.sendEmail(createAccount);
+    await emailSender.sendEmail(createAccount);
   }
   if (reason === "password_reset") {
     const resetPassword = emailTemplate.resetPassword(value);
-    emailSender.sendEmail(resetPassword);
+    await emailSender.sendEmail(resetPassword);
   }
 
   //save to DB

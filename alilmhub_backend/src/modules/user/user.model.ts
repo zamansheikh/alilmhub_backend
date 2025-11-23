@@ -54,10 +54,11 @@ userSchema.index({ reputation: 1 });
 // keep Auth email in sync
 userSchema.pre("save", async function (next) {
   if (this.isModified("email")) {
-    const auth = await Auth.findById(this.authId);
+    const session = this.$session();
+    const auth = await Auth.findById(this.authId).session(session);
     if (auth) {
       auth.email = this.email;
-      await auth.save();
+      await auth.save({ session });
     }
   }
   next();
