@@ -16,11 +16,11 @@ const apiRoutes = [
     route: UserRoutes,
   },
   {
-    path: "/references",
+    path: "/reference",
     route: ReferenceRoutes,
   },
   {
-    path: "/topics",
+    path: "/topic",
     route: TopicRoutes,
   },
 ];

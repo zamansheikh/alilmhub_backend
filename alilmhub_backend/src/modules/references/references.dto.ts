@@ -10,9 +10,10 @@ const createReference = z.object({
       .trim(),
     author: z.string().max(200, "Author name cannot exceed 200 characters").trim().optional(),
     citationText: z.string().trim().optional(),
-    sourceUrl: z.string().url("Invalid URL").trim().optional(),
+    sourceUrl: z.url("Invalid URL format").trim().optional(),
     sourceLanguage: z.string().max(50).trim().optional(),
     stance: z.enum(["supporting", "opposing", "neutral"]).default("neutral"),
+    
   }),
 });
 
@@ -27,7 +28,7 @@ const updateReference = z.object({
       .optional(),
     author: z.string().max(200, "Author name cannot exceed 200 characters").trim().optional(),
     citationText: z.string().trim().optional(),
-    sourceUrl: z.string().url("Invalid URL").trim().optional(),
+    sourceUrl: z.url("Invalid URL format").trim().optional(),
     sourceLanguage: z.string().max(50).trim().optional(),
     verified: z.boolean().optional(),
     stance: z.enum(["supporting", "opposing", "neutral"]).optional(),

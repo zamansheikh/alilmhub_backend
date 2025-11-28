@@ -13,6 +13,7 @@ export type TReferences = {
   sourceLanguage?: string;
   verified: boolean;
   verifiedBy?: Types.ObjectId;
+  createdBy: Types.ObjectId;
   stance: TStance;
 };
 

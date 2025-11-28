@@ -4,9 +4,16 @@ import { Reference } from "./references.model";
 import { TReferences } from "./references.interface";
 import { QueryBuilder } from "../../shared/builder/QueryBuilder";
 import { Types } from "mongoose";
+const createReference = async (
+  payload: Partial<TReferences>,
+  userId?: string
+) => {
+  const referenceData = {
+    ...payload,
+    ...(userId && { createdBy: new Types.ObjectId(userId) }),
+  };
 
-const createReference = async (payload: Partial<TReferences>) => {
-  const reference = await Reference.create(payload);
+  const reference = await Reference.create(referenceData);
   return reference;
 };
 
@@ -25,17 +32,19 @@ const getAllReferences = async (query: Record<string, unknown>) => {
 };
 
 const getReferenceBySlug = async (slug: string) => {
-  const reference = await Reference.findOne({ slug }).populate(
-    "verifiedBy",
-    "name email"
-  );
+  const reference = await Reference.findOne({
+    $or: [{ slug }],
+  }).populate("verifiedBy", "name email");
   if (!reference) {
     throw new AppError(StatusCodes.NOT_FOUND, "Reference not found");
   }
   return reference;
 };
 
-const updateReference = async (slug: string, updateData: Partial<TReferences>) => {
+const updateReference = async (
+  slug: string,
+  updateData: Partial<TReferences>
+) => {
   const reference = await Reference.findOne({ slug });
   if (!reference) {
     throw new AppError(StatusCodes.NOT_FOUND, "Reference not found");
@@ -77,7 +86,7 @@ const getBulkReferences = async (ids: string[]) => {
   if (!ids || ids.length === 0) {
     throw new AppError(StatusCodes.BAD_REQUEST, "Reference IDs are required");
   }
-
+  console.log(ids);
   const references = await Reference.find({
     _id: { $in: ids },
   }).populate("verifiedBy", "name email");

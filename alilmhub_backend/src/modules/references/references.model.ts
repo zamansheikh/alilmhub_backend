@@ -5,8 +5,9 @@ const referenceSchema = new Schema<TReferences>(
   {
     slug: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
+      unique: true,
     },
     type: {
       type: String,
@@ -42,6 +43,11 @@ const referenceSchema = new Schema<TReferences>(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    createdBy:{
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     stance: {
       type: String,
       enum: ["supporting", "opposing", "neutral"],
@@ -54,7 +60,6 @@ const referenceSchema = new Schema<TReferences>(
   }
 );
 
-referenceSchema.index({ slug: 1 });
 referenceSchema.index({ type: 1 });
 referenceSchema.index({ verified: 1 });
 referenceSchema.index({ createdAt: -1 });

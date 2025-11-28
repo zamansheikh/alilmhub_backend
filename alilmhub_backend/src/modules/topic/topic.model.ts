@@ -5,8 +5,9 @@ const topicSchema = new Schema<ITopicDocument>(
   {
     slug: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
+      unique: true,
     },
     title: {
       type: String,
@@ -55,7 +56,6 @@ const topicSchema = new Schema<ITopicDocument>(
   }
 );
 
-topicSchema.index({ slug: 1 });
 topicSchema.index({ title: 1 });
 topicSchema.index({ parentTopic: 1 });
 topicSchema.index({ isDeleted: 1 });
