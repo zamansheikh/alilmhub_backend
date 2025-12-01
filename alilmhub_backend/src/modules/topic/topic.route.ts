@@ -6,8 +6,18 @@ import validateRequest from "../../shared/middlewares/validateRequest";
 
 const router = express.Router();
 
+/**
+ * @route   GET /api/v1/topic/knowledge-tree
+ * @desc    Get knowledge tree structure
+ * @access  Public
+ */
 router.get("/knowledge-tree", TopicController.getKnowledgeTree);
 
+/**
+ * @route   POST /api/v1/topic
+ * @desc    Create a new topic
+ * @access  Private
+ */
 router.post(
   "/",
   auth(),
@@ -15,12 +25,32 @@ router.post(
   TopicController.createTopic
 );
 
+/**
+ * @route   GET /api/v1/topic
+ * @desc    Get all topics
+ * @access  Public
+ */
 router.get("/", TopicController.getAllTopics);
 
+/**
+ * @route   GET /api/v1/topic/:slug
+ * @desc    Get topic by slug
+ * @access  Public
+ */
 router.get("/:slug", TopicController.getTopicBySlug);
 
+/**
+ * @route   GET /api/v1/topic/:slug/sub-topics
+ * @desc    Get sub-topics of a topic
+ * @access  Public
+ */
 router.get("/:slug/sub-topics", TopicController.getSubTopics);
 
+/**
+ * @route   PATCH /api/v1/topic/:slug
+ * @desc    Update topic
+ * @access  Private
+ */
 router.patch(
   "/:slug",
   auth(),
@@ -28,8 +58,18 @@ router.patch(
   TopicController.updateTopic
 );
 
+/**
+ * @route   DELETE /api/v1/topic/:slug
+ * @desc    Delete topic
+ * @access  Private
+ */
 router.delete("/:slug", auth(), TopicController.deleteTopic);
 
+/**
+ * @route   PATCH /api/v1/topic/:slug/add-references
+ * @desc    Add references to topic
+ * @access  Private
+ */
 router.patch(
   "/:slug/add-references",
   auth(),
@@ -37,6 +77,11 @@ router.patch(
   TopicController.addReferences
 );
 
+/**
+ * @route   PATCH /api/v1/topic/:slug/remove-references
+ * @desc    Remove references from topic
+ * @access  Private
+ */
 router.patch(
   "/:slug/remove-references",
   auth(),

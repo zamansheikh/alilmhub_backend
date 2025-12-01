@@ -7,7 +7,7 @@ import validateRequest from "../../shared/middlewares/validateRequest";
 const router = express.Router();
 
 /**
- * @route   POST /api/v1/debates
+ * @route   POST /api/v1/debate
  * @desc    Create a new debate
  * @access  Private
  */
@@ -19,35 +19,35 @@ router.post(
 );
 
 /**
- * @route   GET /api/v1/debates
+ * @route   GET /api/v1/debate
  * @desc    Get all debates
  * @access  Public
  */
 router.get("/", DebateController.getAllDebates);
 
 /**
- * @route   GET /api/v1/debates/topic/:topicId
+ * @route   GET /api/v1/debate/topic/:topicId
  * @desc    Get debates by topic
  * @access  Public
  */
 router.get("/topic/:topicId", DebateController.getDebatesByTopic);
 
 /**
- * @route   GET /api/v1/debates/user/:userId
+ * @route   GET /api/v1/debate/user/:userId
  * @desc    Get debates by user
  * @access  Public
  */
 router.get("/user/:userId", DebateController.getDebatesByUser);
 
 /**
- * @route   GET /api/v1/debates/:slug
+ * @route   GET /api/v1/debate/:slug
  * @desc    Get debate by slug
  * @access  Public
  */
 router.get("/:slug", DebateController.getDebateBySlug);
 
 /**
- * @route   PATCH /api/v1/debates/:slug
+ * @route   PATCH /api/v1/debate/:slug
  * @desc    Update debate
  * @access  Private (Author only)
  */
@@ -59,14 +59,14 @@ router.patch(
 );
 
 /**
- * @route   DELETE /api/v1/debates/:slug
+ * @route   DELETE /api/v1/debate/:slug
  * @desc    Delete debate
  * @access  Private (Author only)
  */
 router.delete("/:slug", auth(), DebateController.deleteDebate);
 
 /**
- * @route   PATCH /api/v1/debates/:slug/add-references
+ * @route   PATCH /api/v1/debate/:slug/add-references
  * @desc    Add references to debate
  * @access  Private
  */
@@ -78,7 +78,7 @@ router.patch(
 );
 
 /**
- * @route   PATCH /api/v1/debates/:slug/remove-references
+ * @route   PATCH /api/v1/debate/:slug/remove-references
  * @desc    Remove references from debate
  * @access  Private
  */
@@ -90,7 +90,7 @@ router.patch(
 );
 
 /**
- * @route   POST /api/v1/debates/:slug/join
+ * @route   POST /api/v1/debate/:slug/join
  * @desc    Join a debate
  * @access  Private
  */
@@ -102,14 +102,14 @@ router.post(
 );
 
 /**
- * @route   POST /api/v1/debates/:slug/leave
+ * @route   POST /api/v1/debate/:slug/leave
  * @desc    Leave a debate
  * @access  Private
  */
 router.post("/:slug/leave", auth(), DebateController.leaveDebate);
 
 /**
- * @route   PATCH /api/v1/debates/:slug/status
+ * @route   PATCH /api/v1/debate/:slug/status
  * @desc    Update debate status
  * @access  Private (Author only)
  */
