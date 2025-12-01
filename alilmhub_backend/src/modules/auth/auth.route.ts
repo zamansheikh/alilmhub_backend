@@ -6,42 +6,66 @@ import auth from "../../shared/middlewares/auth";
 
 const router = express.Router();
 
-// Signup route
+/**
+ * @route   POST /api/v1/auth/signup
+ * @desc    Register a new user
+ * @access  Public
+ */
 router.post(
   "/signup",
   validateRequest(AuthValidation.createUserDto),
   AuthController.createUser
 );
 
-// Login route
+/**
+ * @route   POST /api/v1/auth/login
+ * @desc    Authenticate user and get token
+ * @access  Public
+ */
 router.post(
   "/login",
   validateRequest(AuthValidation.loginUserDto),
   AuthController.loginUser
 );
 
-// Verify email route
+/**
+ * @route   POST /api/v1/auth/verify-email
+ * @desc    Verify user email with OTP
+ * @access  Public
+ */
 router.post(
   "/verify-email",
   validateRequest(AuthValidation.verifyEmailDto),
   AuthController.verifyEmail
 );
 
-// Forgot password route
+/**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Send password reset email
+ * @access  Public
+ */
 router.post(
   "/forgot-password",
   validateRequest(AuthValidation.forgetPasswordDto),
   AuthController.forgetPassword
 );
 
-// Reset password route
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Reset user password with token
+ * @access  Public
+ */
 router.post(
   "/reset-password",
   validateRequest(AuthValidation.resetPasswordDto),
   AuthController.resetPassword
 );
 
-// Change password route (requires authentication)
+/**
+ * @route   POST /api/v1/auth/change-password
+ * @desc    Change user password
+ * @access  Private
+ */
 router.post(
   "/change-password",
   auth(),
@@ -49,14 +73,22 @@ router.post(
   AuthController.changePassword
 );
 
-// Resend OTP route
+/**
+ * @route   POST /api/v1/auth/resend-otp
+ * @desc    Resend OTP for email verification
+ * @access  Public
+ */
 router.post(
   "/resend-otp",
   validateRequest(AuthValidation.resendOtpDto),
   AuthController.resendOtp
 );
 
-// Delete account route (requires authentication)
+/**
+ * @route   DELETE /api/v1/auth/delete-account
+ * @desc    Delete user account
+ * @access  Private
+ */
 router.delete(
   "/delete-account",
   auth(),
