@@ -6,12 +6,23 @@ import validateRequest from "../../shared/middlewares/validateRequest";
 
 const router = express.Router();
 
+// ============================================================================
+// IMPORTANT: Route order matters! Specific routes MUST come before generic ones
+// ============================================================================
+
 /**
  * @route   GET /api/v1/topic/knowledge-tree
  * @desc    Get knowledge tree structure
  * @access  Public
  */
 router.get("/knowledge-tree", TopicController.getKnowledgeTree);
+
+/**
+ * @route   GET /api/v1/topic/by-path
+ * @desc    Get topics by path
+ * @access  Public
+ */
+router.get("/by-path", TopicController.getTopicsByPath);
 
 /**
  * @route   POST /api/v1/topic
@@ -33,11 +44,36 @@ router.post(
 router.get("/", TopicController.getAllTopics);
 
 /**
- * @route   GET /api/v1/topic/:slug
- * @desc    Get topic by slug
+ * @route   GET /api/v1/topic/:slug/versions
+ * @desc    Get all versions of a topic
  * @access  Public
  */
-router.get("/:slug", TopicController.getTopicBySlug);
+router.get("/:slug/versions", TopicController.getTopicVersions);
+
+/**
+ * @route   GET /api/v1/topic/:slug/versions/:versionId
+ * @desc    Get specific version of a topic
+ * @access  Public
+ */
+router.get(
+  "/:slug/versions/:versionId",
+  validateRequest(TopicValidation.getVersion),
+  TopicController.getTopicVersion
+);
+
+/**
+ * @route   GET /api/v1/topic/:slug/children
+ * @desc    Get immediate children of a topic
+ * @access  Public
+ */
+router.get("/:slug/children", TopicController.getTopicChildren);
+
+/**
+ * @route   GET /api/v1/topic/:slug/subtree
+ * @desc    Get entire subtree of a topic
+ * @access  Public
+ */
+router.get("/:slug/subtree", TopicController.getTopicSubtree);
 
 /**
  * @route   GET /api/v1/topic/:slug/sub-topics
@@ -45,6 +81,14 @@ router.get("/:slug", TopicController.getTopicBySlug);
  * @access  Public
  */
 router.get("/:slug/sub-topics", TopicController.getSubTopics);
+
+/**
+ * @route   GET /api/v1/topic/:slug
+ * @desc    Get topic by slug
+ * @access  Public
+ * @note    MUST be after all specific /:slug/* routes
+ */
+router.get("/:slug", TopicController.getTopicBySlug);
 
 /**
  * @route   PATCH /api/v1/topic/:slug
@@ -87,6 +131,18 @@ router.patch(
   auth(),
   validateRequest(TopicValidation.removeReferences),
   TopicController.removeReferences
+);
+
+/**
+ * @route   PUT /api/v1/topic/:slug/content
+ * @desc    Update topic content (creates new version)
+ * @access  Private
+ */
+router.put(
+  "/:slug/content",
+  auth(),
+  validateRequest(TopicValidation.updateTopicContent),
+  TopicController.updateTopicContent
 );
 
 export const TopicRoutes: Router = router;

@@ -25,7 +25,7 @@ const getAllReferences = async (query: Record<string, unknown>) => {
     .paginate()
     .fields();
 
-  const result = await referenceQuery.modelQuery;
+  const result = await referenceQuery.modelQuery.lean();
   const meta = await referenceQuery.countTotal();
 
   return { result, meta };
@@ -67,7 +67,11 @@ const deleteReference = async (slug: string) => {
   return reference;
 };
 
-const verifyReference = async (slug: string, userId: string) => {
+const verifyReference = async (slug: string, userId?: string) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   const reference = await Reference.findOne({ slug });
   if (!reference) {
     throw new AppError(StatusCodes.NOT_FOUND, "Reference not found");

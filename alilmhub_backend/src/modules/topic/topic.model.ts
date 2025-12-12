@@ -1,11 +1,116 @@
 import { model, Schema, Types } from "mongoose";
-import { ITopicDocument, TopicModel, TBreadcrumb } from "./topic.interface";
+import { 
+  ITopicDocument, 
+  TopicModel, 
+  TBreadcrumb, 
+  TSpan, 
+  TContentUnit, 
+  TContentBlock, 
+  TContentChange, 
+  TVersion 
+} from "./topic.interface";
+
+// ============================================================================
+// SUB-SCHEMAS
+// ============================================================================
+
+const spanSchema = new Schema<TSpan>(
+  {
+    text: { type: String, required: true },
+    type: {
+      type: String,
+      enum: ["text", "reference", "debate"],
+      required: true,
+    },
+    marks: [{ type: String }],
+    data: {
+      refId: String,
+      debateId: String,
+      stance: {
+        type: String,
+        enum: ["supporting", "opposing", "neutral"],
+      },
+    },
+  },
+  { _id: false }
+);
+
+const contentUnitSchema = new Schema<TContentUnit>(
+  {
+    id: { type: String, required: true },
+    content: { type: String, required: true },
+    spans: [spanSchema],
+  },
+  { _id: false }
+);
+
+const contentBlockSchema = new Schema<TContentBlock>(
+  {
+    id: { type: String, required: true },
+    type: {
+      type: String,
+      enum: ["heading", "paragraph", "list", "quote", "code"],
+      required: true,
+    },
+    units: [contentUnitSchema],
+    metadata: {
+      level: Number,
+      ordered: Boolean,
+      language: String,
+    },
+  },
+  { _id: false }
+);
+
+const contentChangeSchema = new Schema<TContentChange>(
+  {
+    blockId: { type: String, required: true },
+    unitId: { type: String, required: true },
+    spanIndex: { type: Number, required: true },
+    oldText: { type: String, required: true },
+    newText: { type: String, required: true },
+    diff: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const versionSchema = new Schema<TVersion>(
+  {
+    versionId: { type: String, required: true },
+    changedAt: { type: Date, required: true },
+    changedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    changes: [contentChangeSchema],
+    contentBlocks: [contentBlockSchema],
+  },
+  { _id: false }
+);
+
+// ============================================================================
+// MAIN TOPIC SCHEMA
+// ============================================================================
 
 const topicSchema = new Schema<ITopicDocument>(
   {
+    // ===== IDENTIFICATION =====
+    // Three identifier fields exist for different purposes:
+    // - _id: MongoDB's internal ObjectId (auto-generated, immutable)
+    // - slug: Human-readable URL identifier (auto-generated or custom, immutable after creation)
+    // - id: Custom semantic identifier (auto-generated from title, immutable after creation)
+    // 
+    // Usage guidelines:
+    // - Use 'slug' for public-facing URLs and routing
+    // - Use 'id' for internal relationships and business logic
+    // - Use '_id' only for legacy MongoDB operations
+    id: {
+      type: String,
+      required: false, // Will be auto-generated
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
     slug: {
       type: String,
-      required: false,
+      required: true, // Required to prevent null slugs
       trim: true,
       unique: true,
     },
@@ -14,10 +119,78 @@ const topicSchema = new Schema<ITopicDocument>(
       required: true,
       trim: true,
     },
+
+    // ===== HIERARCHY (MATERIALIZED PATH) =====
+    parentId: {
+      type: String,
+      ref: "Topic",
+    },
+    level: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    path: {
+      type: String,
+      required: true,
+      default: "/",
+      trim: true,
+    },
+
+    // ===== CONTENT =====
+    summary: {
+      type: String,
+      required: false, // Made optional for migration
+      default: "",
+      trim: true,
+    },
     titleDescription: {
       type: String,
       trim: true,
     },
+    wikiContent: {
+      type: String,
+      required: false, // Made optional for migration
+      default: "",
+    },
+
+    // ===== VERSIONED CONTENT =====
+    versions: {
+      type: [versionSchema],
+      default: [],
+    },
+    contentBlocks: {
+      type: [contentBlockSchema],
+      required: false, // Made optional for migration
+      default: [],
+    },
+
+    // ===== STATUS & WORKFLOW =====
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "published",
+    },
+    canonical: {
+      type: Boolean,
+      default: true,
+    },
+
+    // ===== RELATIONSHIPS =====
+    references: {
+      type: [String],
+      default: [],
+    },
+    debates: {
+      type: [String],
+      default: [],
+    },
+    discussions: {
+      type: [String],
+      default: [],
+    },
+
+    // ===== LEGACY FIELDS (BACKWARD COMPATIBILITY) =====
     parentTopic: {
       type: Schema.Types.ObjectId,
       ref: "Topic",
@@ -30,17 +203,25 @@ const topicSchema = new Schema<ITopicDocument>(
       type: Number,
       default: 0,
     },
+
+    // ===== METADATA =====
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    references: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Reference",
-      },
-    ],
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
+    editCount: {
+      type: Number,
+      default: 0,
+    },
     isFeatured: {
       type: Boolean,
       default: false,
@@ -56,31 +237,168 @@ const topicSchema = new Schema<ITopicDocument>(
   }
 );
 
+// ============================================================================
+// INDEXES
+// ============================================================================
+
+// Legacy indexes
 topicSchema.index({ title: 1 });
 topicSchema.index({ parentTopic: 1 });
 topicSchema.index({ isDeleted: 1 });
 topicSchema.index({ createdAt: -1 });
 
+// New indexes for scalability
+topicSchema.index({ id: 1 }, { unique: true, sparse: true });
+topicSchema.index({ slug: 1 }, { unique: true });
+topicSchema.index({ parentId: 1 });
+topicSchema.index({ path: 1 });
+topicSchema.index({ status: 1, canonical: 1 });
+topicSchema.index({ references: 1 });
+topicSchema.index({ debates: 1 });
+topicSchema.index({ viewCount: -1 });
+topicSchema.index({ updatedAt: -1 });
+
+// Compound indexes
+topicSchema.index({ path: 1, status: 1 });
+topicSchema.index({ level: 1, viewCount: -1 });
+
+// Text search
+topicSchema.index({ title: "text", summary: "text", wikiContent: "text" });
+
+// ============================================================================
+// MIDDLEWARE
+// ============================================================================
+
 topicSchema.pre("save", async function (next) {
-  if (!this.slug) {
-    const lastTopic = await Topic.findOne()
-      .sort({ createdAt: -1 })
-      .select("slug");
+  // Step 0: Prevent slug modification on existing documents
+  if (!this.isNew && this.isModified("slug")) {
+    throw new Error(
+      "Slug cannot be modified after creation. " +
+      "Changing slug would break paths of all child topics. " +
+      "If you need to change the URL, create a redirect instead."
+    );
+  }
+
+  // Step 1: Auto-generate slug if not provided
+  if (!this.slug && this.isNew) {
+    // Use timestamp + random to avoid race conditions
+    // Format: TOP_1733990400123_abc
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 5);
+    this.slug = `TOP_${timestamp}_${randomSuffix}`;
     
-    let nextNumber = 1;
-    if (lastTopic?.slug) {
-      const match = lastTopic.slug.match(/TOP_(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
+    // Ensure uniqueness (unlikely but possible collision)
+    let counter = 1;
+    while (counter < 5) {
+      const exists = await Topic.findOne({ slug: this.slug }).lean();
+      if (!exists) break;
+      this.slug = `TOP_${timestamp}_${randomSuffix}_${counter}`;
+      counter++;
+    }
+  }
+
+  // Step 2: Auto-generate custom ID if not provided (with uniqueness check)
+  if (!this.id && this.isNew) {
+    // Create ID from title: "Salah (Prayer)" → "topic_salah_prayer"
+    let slugified = this.title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "_")
+      .substring(0, 50);
+    
+    // Add timestamp suffix to reduce collision chance
+    const shortTimestamp = Date.now().toString().slice(-6);
+    let customId = `topic_${slugified}_${shortTimestamp}`;
+    
+    // Ensure uniqueness with limited retries
+    let counter = 1;
+    const maxRetries = 5;
+    while (counter < maxRetries) {
+      const existing = await Topic.findOne({ id: customId }).lean();
+      if (!existing) break;
+      customId = `topic_${slugified}_${shortTimestamp}_${counter}`;
+      counter++;
     }
     
-    this.slug = `TOP_${nextNumber}`;
+    this.id = customId;
   }
+
+  // Step 3: Calculate path and check for circular references
+  // NOTE: Slug is immutable after creation (enforced in Step 0)
+  // However, parentId can change, which requires path recalculation
+  if (this.isNew || this.isModified("parentId")) {
+    if (this.parentId) {
+      // Check for circular reference
+      if (this.id && this.parentId === this.id) {
+        throw new Error("A topic cannot be its own parent");
+      }
+      
+      const parent = await Topic.findOne({ id: this.parentId });
+      if (parent) {
+        // Check if current topic is an ancestor of the new parent
+        // We need to check if the parent's path contains our current slug
+        if (!this.isNew && this.slug) {
+          // For existing topics, check if parent path includes our slug
+          const pathSegments = parent.path.split('/').filter(Boolean);
+          if (pathSegments.includes(this.slug)) {
+            throw new Error("Circular reference detected: Cannot set a descendant as parent");
+          }
+        }
+        
+        this.path = `${parent.path}/${this.slug}`;
+        this.level = parent.level + 1;
+        
+        // Sync legacy field for backward compatibility
+        if (parent._id) {
+          this.parentTopic = parent._id as Types.ObjectId;
+        }
+      } else {
+        // Parent not found, make it root
+        this.path = `/${this.slug}`;
+        this.level = 0;
+        this.parentId = undefined;
+        this.parentTopic = undefined;
+      }
+    } else {
+      // No parent - this is a root topic
+      this.path = `/${this.slug}`;
+      this.level = 0;
+      this.parentTopic = undefined;
+    }
+  }
+
+  // Step 4: Sync legacy fields
+  this.viewsCount = this.viewCount;
+  this.editsCount = this.editCount;
+
   next();
 });
 
+// ============================================================================
+// INSTANCE METHODS
+// ============================================================================
+
+/**
+ * Get breadcrumb navigation
+ * NEW: O(1) with materialized path - just split and query once!
+ * OLD: O(n) with recursive queries
+ */
 topicSchema.methods.getBreadcrumb = async function (): Promise<TBreadcrumb[]> {
+  // Use new path-based approach if available
+  if (this.path && this.path !== "/") {
+    const slugs = this.path.split("/").filter(Boolean);
+    const topics = await Topic.find({ slug: { $in: slugs } }).select("slug title");
+    
+    return slugs.map((slug: string) => {
+      const topic = topics.find((t) => t.slug === slug);
+      return {
+        slug: topic?.slug || slug,
+        title: topic?.title || slug,
+      };
+    });
+  }
+
+  // Fallback to legacy recursive approach
   const breadcrumbs: TBreadcrumb[] = [];
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   let currentTopic: any = this;
@@ -101,8 +419,95 @@ topicSchema.methods.getBreadcrumb = async function (): Promise<TBreadcrumb[]> {
   return breadcrumbs;
 };
 
+/**
+ * Get a specific version
+ */
+topicSchema.methods.getVersion = function (versionId: string) {
+  return this.versions.find((v: TVersion) => v.versionId === versionId) || null;
+};
+
+/**
+ * Create a new version
+ */
+topicSchema.methods.createNewVersion = async function (
+  userId: Types.ObjectId,
+  changes: TContentChange[],
+  newContent: TContentBlock[]
+) {
+  const nextVersionNumber = this.versions.length + 1;
+  const newVersion: TVersion = {
+    versionId: `v${nextVersionNumber}`,
+    changedAt: new Date(),
+    changedBy: userId,
+    changes: changes,
+    contentBlocks: newContent,
+  };
+
+  this.versions.push(newVersion);
+  this.contentBlocks = newContent;
+  this.updatedBy = userId;
+  this.editCount = this.versions.length - 1;
+  this.editsCount = this.editCount;
+
+  // Update denormalized references and debates
+  this.references = this.extractReferences(newContent);
+  this.debates = this.extractDebates(newContent);
+
+  await this.save();
+};
+
+/**
+ * Extract all reference IDs from content
+ */
+topicSchema.methods.extractReferences = function (
+  blocks: TContentBlock[]
+): string[] {
+  const refIds = new Set<string>();
+
+  blocks.forEach((block) => {
+    block.units.forEach((unit) => {
+      unit.spans.forEach((span) => {
+        if (span.type === "reference" && span.data?.refId) {
+          refIds.add(span.data.refId);
+        }
+      });
+    });
+  });
+
+  return Array.from(refIds);
+};
+
+/**
+ * Extract all debate IDs from content
+ */
+topicSchema.methods.extractDebates = function (
+  blocks: TContentBlock[]
+): string[] {
+  const debateIds = new Set<string>();
+
+  blocks.forEach((block) => {
+    block.units.forEach((unit) => {
+      unit.spans.forEach((span) => {
+        if (span.type === "debate" && span.data?.debateId) {
+          debateIds.add(span.data.debateId);
+        }
+      });
+    });
+  });
+
+  return Array.from(debateIds);
+};
+
+// ============================================================================
+// STATIC METHODS
+// ============================================================================
+
 topicSchema.statics.isExistBySlug = async function (slug: string) {
   return this.findOne({ slug });
+};
+
+topicSchema.statics.isExistById = async function (id: string) {
+  return this.findOne({ id });
 };
 
 topicSchema.statics.getBreadcrumbPath = async function (
@@ -111,6 +516,25 @@ topicSchema.statics.getBreadcrumbPath = async function (
   const topic = await this.findById(topicId);
   if (!topic) return [];
   return topic.getBreadcrumb();
+};
+
+/**
+ * Get all children of a topic
+ * NEW: Single query with parentId
+ */
+topicSchema.statics.getChildren = async function (topicId: string) {
+  return this.find({ parentId: topicId, isDeleted: { $ne: true } });
+};
+
+/**
+ * Get entire subtree
+ * NEW: Single regex query with materialized path!
+ */
+topicSchema.statics.getSubtree = async function (path: string) {
+  return this.find({ 
+    path: new RegExp(`^${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+    isDeleted: { $ne: true }
+  });
 };
 
 export const Topic = model<ITopicDocument, TopicModel>(

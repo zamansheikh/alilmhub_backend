@@ -5,7 +5,7 @@ import catchAsync from "../../shared/util/catchAsync";
 import sendResponse from "../../shared/util/sendResponse";
 
 const createDebate = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const debate = await DebateServices.createDebate(req.body, userId);
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -37,7 +37,7 @@ const getDebateBySlug = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateDebate = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const debate = await DebateServices.updateDebate(
     req.params.slug,
     req.body,
@@ -52,7 +52,7 @@ const updateDebate = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteDebate = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   await DebateServices.deleteDebate(req.params.slug, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -88,7 +88,7 @@ const removeReferences = catchAsync(async (req: Request, res: Response) => {
 });
 
 const joinDebate = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const { side } = req.body;
   const debate = await DebateServices.joinDebate(req.params.slug, userId, side);
   sendResponse(res, {
@@ -100,7 +100,7 @@ const joinDebate = catchAsync(async (req: Request, res: Response) => {
 });
 
 const leaveDebate = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const debate = await DebateServices.leaveDebate(req.params.slug, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -111,7 +111,7 @@ const leaveDebate = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateStatus = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const { status } = req.body;
   const debate = await DebateServices.updateStatus(req.params.slug, status, userId);
   sendResponse(res, {

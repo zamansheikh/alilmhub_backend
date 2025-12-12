@@ -5,7 +5,7 @@ const referenceSchema = new Schema<TReferences>(
   {
     slug: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
       unique: true,
     },
@@ -65,20 +65,28 @@ referenceSchema.index({ verified: 1 });
 referenceSchema.index({ createdAt: -1 });
 
 referenceSchema.pre("save", async function (next) {
-  if (!this.slug) {
-    const lastReference = await Reference.findOne()
-      .sort({ createdAt: -1 })
-      .select("slug");
+  // Prevent slug modification on existing documents
+  if (!this.isNew && this.isModified("slug")) {
+    throw new Error(
+      "Slug cannot be modified after creation."
+    );
+  }
+
+  if (!this.slug && this.isNew) {
+    // Use timestamp + random to avoid race conditions
+    // Format: REF_1733990400123_abc
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 5);
+    this.slug = `REF_${timestamp}_${randomSuffix}`;
     
-    let nextNumber = 1;
-    if (lastReference?.slug) {
-      const match = lastReference.slug.match(/REF_(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
+    // Ensure uniqueness (unlikely but possible collision)
+    let counter = 1;
+    while (counter < 5) {
+      const exists = await Reference.findOne({ slug: this.slug }).lean();
+      if (!exists) break;
+      this.slug = `REF_${timestamp}_${randomSuffix}_${counter}`;
+      counter++;
     }
-    
-    this.slug = `REF_${nextNumber}`;
   }
   next();
 });

@@ -22,17 +22,12 @@ services:
       - "5016:5014"
     env_file:
       - ./alilmhub_backend/.env.production
-    volumes:
-      - ./logs:/logs
     depends_on:
       redis_alilmhub:
-        condition: service_healthy
-      elasticsearch:
         condition: service_healthy
     restart: always
     environment:
       - NODE_ENV=production
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
     # Limit container logs to prevent unbounded growth
     logging:
       driver: "json-file"
@@ -41,44 +36,6 @@ services:
         max-file: "3"
     networks:
       - alilmhub_network
-  # Elasticsearch service
-  elasticsearch:
-    image: elasticsearch:7.9.2
-    container_name: elasticsearch_alilmhub_prod
-    restart: always
-    ports:
-      - "9200:9200"
-    environment:
-      - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
-      - "discovery.type=single-node"
-      - "xpack.security.enabled=false"
-    volumes:
-      - elasticsearch_data_prod:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks: 
-      - alilmhub_network
-
-  # Kibana Service
-  kibana:
-    image: kibana:7.9.2
-    container_name: kibana_alilmhub_prod
-    restart: always
-    depends_on: 
-      - elasticsearch 
-    ports: 
-      - "5601:5601"
-    environment:
-      - "ELASTICSEARCH_HOSTS=http://elasticsearch:9200" 
-    networks: 
-      - alilmhub_network
-
-volumes:
-  elasticsearch_data_prod:
 
 networks:
   alilmhub_network:

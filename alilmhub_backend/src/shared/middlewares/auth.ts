@@ -17,33 +17,34 @@ const auth =
         throw new AppError(StatusCodes.UNAUTHORIZED, "You are not authorized");
       }
 
-      if (tokenWithBearer)
-        if (tokenWithBearer && tokenWithBearer.startsWith("Bearer")) {
-          const token = tokenWithBearer.split(" ")[1];
-          //verify token
-          const verifyUser = jwtHelper.verifyToken(
-            token,
-            config.jwt.jwt_secret as Secret
+      if (tokenWithBearer && tokenWithBearer.startsWith("Bearer")) {
+        const token = tokenWithBearer.split(" ")[1];
+        //verify token
+        const verifyUser = jwtHelper.verifyToken(
+          token,
+          config.jwt.jwt_secret as Secret
+        );
+        const requestedUser = await User.findById(verifyUser.id);
+        if (!requestedUser) {
+          throw new AppError(
+            StatusCodes.UNAUTHORIZED,
+            "You are not authorized"
           );
-          const requestedUser = await User.findById(verifyUser.id);
-          if (!requestedUser) {
-            throw new AppError(
-              StatusCodes.UNAUTHORIZED,
-              "You are not authorized"
-            );
-          }
-          //set user to header
-          req.user = requestedUser;
-          //guard user
-          if (roles.length && !roles.includes(requestedUser.role)) {
-            throw new AppError(
-              StatusCodes.FORBIDDEN,
-              "You don't have permission to access this api"
-            );
-          }
-          console.log("passed");
-          next();
         }
+        //set user to header
+        req.user = requestedUser;
+        //guard user
+        if (roles.length && !roles.includes(requestedUser.role)) {
+          throw new AppError(
+            StatusCodes.FORBIDDEN,
+            "You don't have permission to access this api"
+          );
+        }
+        console.log("passed");
+        next();
+      } else {
+        throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid token format");
+      }
     } catch (error) {
       next(error);
     }

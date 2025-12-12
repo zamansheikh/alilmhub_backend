@@ -307,12 +307,12 @@ const resetPasswordToDB = async (
 };
 
 const changePasswordToDB = async (
-  user: JwtPayload,
+  user: any,
   payload: TChangePassword
 ) => {
   console.log(user, payload);
   const { currentPassword, newPassword } = payload;
-  const isExistUser = await User.findById(user.id).select("authId");
+  const isExistUser = await User.findById(user._id).select("authId");
   const authEntry = await Auth.findById(isExistUser?.authId);
   if (!isExistUser || !authEntry) {
     throw new AppError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -349,9 +349,9 @@ const changePasswordToDB = async (
   return null;
 };
 
-const deleteAccountToDB = async (user: JwtPayload) => {
+const deleteAccountToDB = async (user: any) => {
   const result = await User.findByIdAndUpdate(
-    user.id,
+    user._id,
     { isDeleted: true },
     { new: true }
   );

@@ -34,7 +34,8 @@ router.get("/:id", UserController.getUserById);
  * @access  Private
  */
 router.patch(
-  "/:id", 
+  "/:id",
+  auth(),
   fileUploadHandler,
   validateRequest(UserValidation.updateUser),
   UserController.updateUser
@@ -47,6 +48,7 @@ router.patch(
  */
 router.patch(
   "/:id/status",
+  auth(),
   validateRequest(UserValidation.updateUserActivationStatus),
   UserController.updateUserActivationStatus
 );
@@ -58,6 +60,7 @@ router.patch(
  */
 router.patch(
   "/:id/role",
+  auth(),
   validateRequest(UserValidation.updateUserRole),
   UserController.updateUserRole
 );

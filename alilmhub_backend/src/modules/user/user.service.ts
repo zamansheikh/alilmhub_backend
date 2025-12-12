@@ -13,7 +13,7 @@ const getAllUsers = async (query: Record<string, unknown>) => {
     .paginate()
     .fields();
 
-  const result = await userQuery.modelQuery;
+  const result = await userQuery.modelQuery.lean();
   const meta = await userQuery.countTotal();
 
   return { result, meta };
@@ -77,7 +77,11 @@ const updateUserRole = async (id: string, role: "USER" | "ADMIN") => {
   return user;
 };
 
-const getMe = async (userId: string) => {
+const getMe = async (userId?: string) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   // If not cached, query the database using lean with virtuals enabled.
   const user = await User.findById(userId).lean({
     virtuals: true,

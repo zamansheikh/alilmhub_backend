@@ -80,7 +80,7 @@ const updateUserRole = catchAsync(async (req: Request, res: Response) => {
 
 //get me
 const getMe = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const result = await UserServices.getMe(userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,

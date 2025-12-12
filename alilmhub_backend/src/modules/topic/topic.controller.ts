@@ -5,7 +5,7 @@ import catchAsync from "../../shared/util/catchAsync";
 import sendResponse from "../../shared/util/sendResponse";
 
 const createTopic = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const topic = await TopicServices.createTopic(req.body, userId);
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -37,7 +37,7 @@ const getTopicBySlug = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateTopic = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const topic = await TopicServices.updateTopic(
     req.params.slug,
     req.body,
@@ -52,7 +52,7 @@ const updateTopic = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteTopic = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   await TopicServices.deleteTopic(req.params.slug, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -107,7 +107,88 @@ const getKnowledgeTree = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// ============================================================================
+// NEW CONTROLLERS FOR VERSIONING
+// ============================================================================
+
+const getTopicVersions = catchAsync(async (req: Request, res: Response) => {
+  const versions = await TopicServices.getTopicVersions(req.params.slug);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topic versions retrieved successfully",
+    data: versions,
+  });
+});
+
+const getTopicVersion = catchAsync(async (req: Request, res: Response) => {
+  const version = await TopicServices.getTopicVersion(
+    req.params.slug,
+    req.params.versionId
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topic version retrieved successfully",
+    data: version,
+  });
+});
+
+const updateTopicContent = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?._id?.toString();
+  const topic = await TopicServices.updateTopicContent(
+    req.params.slug,
+    req.body,
+    userId
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topic content updated successfully",
+    data: topic,
+  });
+});
+
+// ============================================================================
+// NEW CONTROLLERS FOR HIERARCHY
+// ============================================================================
+
+const getTopicChildren = catchAsync(async (req: Request, res: Response) => {
+  const children = await TopicServices.getTopicChildren(req.params.slug);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topic children retrieved successfully",
+    data: children,
+  });
+});
+
+const getTopicSubtree = catchAsync(async (req: Request, res: Response) => {
+  const subtree = await TopicServices.getTopicSubtree(req.params.slug);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topic subtree retrieved successfully",
+    data: subtree,
+  });
+});
+
+const getTopicsByPath = catchAsync(async (req: Request, res: Response) => {
+  const topics = await TopicServices.getTopicsByPath(req.query.path as string);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topics by path retrieved successfully",
+    data: topics,
+  });
+});
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
 export const TopicController = {
+  // Legacy controllers
   createTopic,
   getAllTopics,
   getTopicBySlug,
@@ -117,4 +198,14 @@ export const TopicController = {
   removeReferences,
   getSubTopics,
   getKnowledgeTree,
+  
+  // New versioning controllers
+  getTopicVersions,
+  getTopicVersion,
+  updateTopicContent,
+  
+  // New hierarchy controllers
+  getTopicChildren,
+  getTopicSubtree,
+  getTopicsByPath,
 };

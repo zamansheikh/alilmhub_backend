@@ -1,14 +1,9 @@
 import { createLogger } from "winston";
-import { consoleTransport, elasticTransport, errorFileTransport, infoFileTransport, requestContext } from "./transport";
-import config from "../../config";
+import { consoleTransport, requestContext } from "./transport";
 
-// Only use console transport in development
-const transports = config.node_env === "production" 
-  ? [errorFileTransport, infoFileTransport, elasticTransport]
-  : [consoleTransport, errorFileTransport, infoFileTransport, elasticTransport];
-
+// Only use console transport for all environments
 export const logger = createLogger({
-  transports,
+  transports: [consoleTransport],
   exitOnError: false
 });
 

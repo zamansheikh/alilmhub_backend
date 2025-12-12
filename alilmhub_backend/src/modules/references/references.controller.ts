@@ -5,7 +5,7 @@ import catchAsync from "../../shared/util/catchAsync";
 import sendResponse from "../../shared/util/sendResponse";
 
 const createReference = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const reference = await ReferenceServices.createReference(req.body, userId);
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -60,7 +60,7 @@ const deleteReference = catchAsync(async (req: Request, res: Response) => {
 });
 
 const verifyReference = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?._id?.toString();
   const reference = await ReferenceServices.verifyReference(
     req.params.slug,
     userId

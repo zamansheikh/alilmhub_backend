@@ -5,7 +5,11 @@ import { Debate } from "./debates.model";
 import { TDebates } from "./debates.interface";
 import { QueryBuilder } from "../../shared/builder/QueryBuilder";
 
-const createDebate = async (payload: Partial<TDebates>, userId: string) => {
+const createDebate = async (payload: Partial<TDebates>, userId?: string) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   const debateData = {
     ...payload,
     author: new Types.ObjectId(userId),
@@ -29,8 +33,9 @@ const getAllDebates = async (query: Record<string, unknown>) => {
     .populate("author", "name email profileImage")
     .populate("topicId", "slug title")
     .populate("references", "slug title type")
-    .populate("supportingMembers", "name email profileImage")
-    .populate("opposingMembers", "name email profileImage");
+    .populate({ path: "supportingMembers", select: "name profileImage", options: { limit: 10 } })
+    .populate({ path: "opposingMembers", select: "name profileImage", options: { limit: 10 } })
+    .lean();
 
   const meta = await debateQuery.countTotal();
 
@@ -42,14 +47,15 @@ const getDebateBySlug = async (slug: string) => {
     .populate("author", "name email profileImage reputation")
     .populate("topicId", "slug title")
     .populate("references", "slug title type author verified")
-    .populate("supportingMembers", "name email profileImage reputation")
-    .populate("opposingMembers", "name email profileImage reputation");
+    .populate({ path: "supportingMembers", select: "name email profileImage reputation", options: { limit: 50 } })
+    .populate({ path: "opposingMembers", select: "name email profileImage reputation", options: { limit: 50 } });
 
   if (!debate) {
     throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
   }
 
-  await Debate.findOneAndUpdate({ slug }, { $inc: { viewsCount: 1 } });
+  // Fire-and-forget view count increment (non-blocking)
+  Debate.findOneAndUpdate({ slug }, { $inc: { viewsCount: 1 } }).exec();
 
   return debate;
 };
@@ -57,8 +63,12 @@ const getDebateBySlug = async (slug: string) => {
 const updateDebate = async (
   slug: string,
   updateData: Partial<TDebates>,
-  userId: string
+  userId?: string
 ) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
   if (!debate) {
     throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
@@ -86,7 +96,11 @@ const updateDebate = async (
   return updatedDebate;
 };
 
-const deleteDebate = async (slug: string, userId: string) => {
+const deleteDebate = async (slug: string, userId?: string) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
   if (!debate) {
     throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
@@ -110,83 +124,93 @@ const deleteDebate = async (slug: string, userId: string) => {
 };
 
 const addReferences = async (slug: string, referenceIds: string[]) => {
-  const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
-  if (!debate) {
-    throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
-  }
-
   const objectIds = referenceIds.map((id) => new Types.ObjectId(id));
 
   const updatedDebate = await Debate.findOneAndUpdate(
-    { slug },
+    { slug, isDeleted: { $ne: true } },
     { $addToSet: { references: { $each: objectIds } } },
     { new: true }
   ).populate("references", "slug title type");
+
+  if (!updatedDebate) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
+  }
 
   return updatedDebate;
 };
 
 const removeReferences = async (slug: string, referenceIds: string[]) => {
-  const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
-  if (!debate) {
-    throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
-  }
-
   const objectIds = referenceIds.map((id) => new Types.ObjectId(id));
 
   const updatedDebate = await Debate.findOneAndUpdate(
-    { slug },
+    { slug, isDeleted: { $ne: true } },
     { $pull: { references: { $in: objectIds } } },
     { new: true }
   ).populate("references", "slug title type");
 
-  return updatedDebate;
-};
-
-const joinDebate = async (slug: string, userId: string, side: "supporting" | "opposing") => {
-  const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
-  if (!debate) {
+  if (!updatedDebate) {
     throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
   }
 
-  if (debate.status !== "open") {
-    throw new AppError(
-      StatusCodes.BAD_REQUEST,
-      "Cannot join a debate that is not open"
-    );
+  return updatedDebate;
+};
+
+const joinDebate = async (slug: string, userId?: string, side?: "supporting" | "opposing") => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  if (!side) {
+    throw new AppError(StatusCodes.BAD_REQUEST, "Side is required");
   }
 
   const userObjectId = new Types.ObjectId(userId);
-
-  // Check if user is already on any side
-  const isSupporting = debate.supportingMembers.some(
-    (member) => member.toString() === userId
-  );
-  const isOpposing = debate.opposingMembers.some(
-    (member) => member.toString() === userId
-  );
-
-  if (isSupporting || isOpposing) {
-    throw new AppError(
-      StatusCodes.BAD_REQUEST,
-      "You have already joined this debate"
-    );
-  }
-
   const updateField = side === "supporting" ? "supportingMembers" : "opposingMembers";
 
+  // Atomic operation: check status, verify not already joined, and add in one query
   const updatedDebate = await Debate.findOneAndUpdate(
-    { slug },
+    { 
+      slug, 
+      isDeleted: { $ne: true },
+      status: "open",
+      supportingMembers: { $ne: userObjectId },
+      opposingMembers: { $ne: userObjectId }
+    },
     { $addToSet: { [updateField]: userObjectId } },
     { new: true }
   )
     .populate("supportingMembers", "name email profileImage")
     .populate("opposingMembers", "name email profileImage");
 
+  if (!updatedDebate) {
+    // Need to determine why it failed - fetch debate to give specific error
+    const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
+    
+    if (!debate) {
+      throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
+    }
+    
+    if (debate.status !== "open") {
+      throw new AppError(
+        StatusCodes.BAD_REQUEST,
+        "Cannot join a debate that is not open"
+      );
+    }
+    
+    // If we reach here, user is already in debate
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "You have already joined this debate"
+    );
+  }
+
   return updatedDebate;
 };
 
-const leaveDebate = async (slug: string, userId: string) => {
+const leaveDebate = async (slug: string, userId?: string) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
   if (!debate) {
     throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");
@@ -210,7 +234,11 @@ const leaveDebate = async (slug: string, userId: string) => {
   return updatedDebate;
 };
 
-const updateStatus = async (slug: string, status: "open" | "closed" | "archived", userId: string) => {
+const updateStatus = async (slug: string, status: "open" | "closed" | "archived", userId?: string) => {
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "User ID is required");
+  }
+  
   const debate = await Debate.findOne({ slug, isDeleted: { $ne: true } });
   if (!debate) {
     throw new AppError(StatusCodes.NOT_FOUND, "Debate not found");

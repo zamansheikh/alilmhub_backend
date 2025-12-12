@@ -1,8 +1,5 @@
-import path from "path";
 import { format, transports } from "winston";
-const { combine, timestamp, label, printf, json } = format;
-import "winston-daily-rotate-file";
-import { ElasticsearchTransport } from "winston-elasticsearch";
+const { combine, timestamp, label, printf } = format;
 import { AsyncLocalStorage } from "async_hooks";
 
 // Create async local storage for request context
@@ -28,53 +25,7 @@ const myFormat = printf(({ level, message, label, timestamp, ...metadata }) => {
   return `${date.toDateString()} ${hour}:${minutes}:${seconds} [${label}] ${level}: ${message} ${meta}`;
 });
 
-const fileTransport = (level: string, fileName: string) => {
-  return new transports.DailyRotateFile({
-    level: level,
-    filename: path.resolve(__dirname, "..", "..", "..", "..", fileName),
-    datePattern: "YYYY-MM-DD", // Daily rotation
-    zippedArchive: true,
-    maxSize: "20m",
-    maxFiles: "14d",
-    format: combine(label({ label: "Job Soccer" }), timestamp(), addRequestId, json()),
-  });
-};
-
 export const consoleTransport = new transports.Console({
   level: "info",
-  format: combine(label({ label: "Job Soccer" }), timestamp(), addRequestId, myFormat),
+  format: combine(label({ label: "alilmhub" }), timestamp(), addRequestId, myFormat),
 });
-
-export const elasticTransport = new ElasticsearchTransport({
-  level: process.env.NODE_ENV === "production" ? "error" : "debug", // Only errors in production
-  clientOpts: {
-    node: process.env.ELASTICSEARCH_URL || "http://localhost:9200",
-    auth: {
-      username: process.env.ELASTICSEARCH_USER || "",
-      password: process.env.ELASTICSEARCH_PASSWORD || "",
-    },
-  },
-  indexPrefix: process.env.ELASTICSEARCH_INDEX_PREFIX || "log-express",
-  indexSuffixPattern: "YYYY-MM-DD",
-  handleRejections: false,
-  handleExceptions: false,
-  buffering: true,
-  bufferLimit: 100,
-  flushInterval: 2000, // Flush every 2 seconds
-  format: combine(addRequestId),
-});
-elasticTransport.on("error", (error) => {
-  console.error("Elasticsearch transport error:", error);
-});
-elasticTransport.on("warning", (warning) => {
-  console.warn("Elasticsearch transport warning:", warning);
-});
-
-export const errorFileTransport = fileTransport(
-  "error",
-   "logs/error/%DATE%-error.log"
-);
-export const infoFileTransport = fileTransport(
-  "info",
-  "logs/success/%DATE%-success.log"
-);

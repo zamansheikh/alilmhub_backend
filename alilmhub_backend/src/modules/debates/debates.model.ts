@@ -5,7 +5,7 @@ const debateSchema = new Schema<IDebateDocument>(
   {
     slug: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
       unique: true,
     },
@@ -83,6 +83,7 @@ const debateSchema = new Schema<IDebateDocument>(
   }
 );
 
+debateSchema.index({ slug: 1, isDeleted: 1 });
 debateSchema.index({ title: 1 });
 debateSchema.index({ topicId: 1 });
 debateSchema.index({ author: 1 });
@@ -91,20 +92,21 @@ debateSchema.index({ isDeleted: 1 });
 debateSchema.index({ createdAt: -1 });
 
 debateSchema.pre("save", async function (next) {
-  if (!this.slug) {
-    const lastDebate = await Debate.findOne()
-      .sort({ createdAt: -1 })
-      .select("slug");
+  if (!this.slug && this.isNew) {
+    // Use timestamp + random to avoid race conditions
+    // Format: DEB_1733990400123_abc
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 5);
+    this.slug = `DEB_${timestamp}_${randomSuffix}`;
     
-    let nextNumber = 1;
-    if (lastDebate?.slug) {
-      const match = lastDebate.slug.match(/DEB_(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
+    // Ensure uniqueness (unlikely but possible collision)
+    let counter = 1;
+    while (counter < 5) {
+      const exists = await Debate.findOne({ slug: this.slug }).lean();
+      if (!exists) break;
+      this.slug = `DEB_${timestamp}_${randomSuffix}_${counter}`;
+      counter++;
     }
-    
-    this.slug = `DEB_${nextNumber}`;
   }
   next();
 });
