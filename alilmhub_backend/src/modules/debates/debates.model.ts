@@ -92,20 +92,37 @@ debateSchema.index({ isDeleted: 1 });
 debateSchema.index({ createdAt: -1 });
 
 debateSchema.pre("save", async function (next) {
+  // Prevent slug modification on existing documents
+  if (!this.isNew && this.isModified("slug")) {
+    throw new Error("Slug cannot be modified after creation.");
+  }
+
   if (!this.slug && this.isNew) {
-    // Use timestamp + random to avoid race conditions
-    // Format: DEB_1733990400123_abc
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substring(2, 5);
-    this.slug = `DEB_${timestamp}_${randomSuffix}`;
+    // Generate SEO-friendly slug from title
+    let baseSlug = this.title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')      // Remove special characters
+      .replace(/\s+/g, '-')           // Replace spaces with hyphens
+      .replace(/-+/g, '-')            // Multiple hyphens to single
+      .replace(/^-|-$/g, '')          // Trim hyphens from edges
+      .substring(0, 60);              // Limit length
     
-    // Ensure uniqueness (unlikely but possible collision)
+    // Ensure uniqueness
+    this.slug = baseSlug;
     let counter = 1;
-    while (counter < 5) {
-      const exists = await Debate.findOne({ slug: this.slug }).lean();
+    const maxRetries = 100;
+    
+    while (counter < maxRetries) {
+      const exists = await Debate.findOne({ slug: this.slug }).select('_id').lean();
       if (!exists) break;
-      this.slug = `DEB_${timestamp}_${randomSuffix}_${counter}`;
+      this.slug = `${baseSlug}-${counter}`;
       counter++;
+    }
+    
+    // Fallback to timestamp if needed
+    if (counter >= maxRetries) {
+      this.slug = `${baseSlug}-${Date.now()}`;
     }
   }
   next();

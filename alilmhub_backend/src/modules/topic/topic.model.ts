@@ -279,21 +279,35 @@ topicSchema.pre("save", async function (next) {
     );
   }
 
-  // Step 1: Auto-generate slug if not provided
+  // Step 1: Auto-generate slug if not provided (SEO-friendly from title)
   if (!this.slug && this.isNew) {
-    // Use timestamp + random to avoid race conditions
-    // Format: TOP_1733990400123_abc
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substring(2, 5);
-    this.slug = `TOP_${timestamp}_${randomSuffix}`;
+    // Generate base slug from title: "Salah (Islamic Prayer)" → "salah-islamic-prayer"
+    let baseSlug = this.title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')      // Remove special characters
+      .replace(/\s+/g, '-')           // Replace spaces with hyphens
+      .replace(/-+/g, '-')            // Multiple hyphens to single
+      .replace(/^-|-$/g, '')          // Trim hyphens from edges
+      .substring(0, 60);              // Limit length
     
-    // Ensure uniqueness (unlikely but possible collision)
+    // Ensure uniqueness with database check
+    this.slug = baseSlug;
     let counter = 1;
-    while (counter < 5) {
-      const exists = await Topic.findOne({ slug: this.slug }).lean();
-      if (!exists) break;
-      this.slug = `TOP_${timestamp}_${randomSuffix}_${counter}`;
+    const maxRetries = 100;  // Handle up to 100 duplicates
+    
+    while (counter < maxRetries) {
+      const exists = await Topic.findOne({ slug: this.slug }).select('_id').lean();
+      if (!exists) break;  // Unique slug found!
+      
+      // Collision detected, append counter
+      this.slug = `${baseSlug}-${counter}`;
       counter++;
+    }
+    
+    // Fallback: if all counters exhausted, use timestamp for guaranteed uniqueness
+    if (counter >= maxRetries) {
+      this.slug = `${baseSlug}-${Date.now()}`;
     }
   }
 
