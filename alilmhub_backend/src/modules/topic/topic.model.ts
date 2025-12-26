@@ -342,39 +342,44 @@ topicSchema.pre("save", async function (next) {
   // However, parentId can change, which requires path recalculation
   if (this.isNew || this.isModified("parentId")) {
     if (this.parentId) {
-      // Check for circular reference
+      // Check for circular reference (self-referencing)
       if (this.id && this.parentId === this.id) {
         throw new Error("A topic cannot be its own parent");
       }
       
-      const parent = await Topic.findOne({ id: this.parentId });
-      if (parent) {
-        // Check if current topic is an ancestor of the new parent
-        // We need to check if the parent's path contains our current slug
-        if (!this.isNew && this.slug) {
-          // For existing topics, check if parent path includes our slug
-          const pathSegments = parent.path.split('/').filter(Boolean);
-          if (pathSegments.includes(this.slug)) {
-            throw new Error("Circular reference detected: Cannot set a descendant as parent");
-          }
+      const parent = await Topic.findOne({ id: this.parentId, isDeleted: { $ne: true } });
+      if (!parent) {
+        // FIXED: Throw error instead of silently making it root
+        throw new Error(`Parent topic with id "${this.parentId}" not found or has been deleted`);
+      }
+      
+      // Check if current topic is an ancestor of the new parent
+      // This prevents circular hierarchies (A → B → C → A)
+      if (!this.isNew && this.slug) {
+        // For existing topics, check if parent path includes our slug
+        const pathSegments = parent.path.split('/').filter(Boolean);
+        if (pathSegments.includes(this.slug)) {
+          throw new Error("Circular reference detected: Cannot set a descendant as parent");
         }
-        
-        this.path = `${parent.path}/${this.slug}`;
-        this.level = parent.level + 1;
-        
-        // Sync legacy field for backward compatibility
-        if (parent._id) {
-          this.parentTopic = parent._id as Types.ObjectId;
-        }
-      } else {
-        // Parent not found, make it root
-        this.path = `/${this.slug}`;
-        this.level = 0;
-        this.parentId = undefined;
-        this.parentTopic = undefined;
+      }
+      
+      // FIXED: Ensure slug is set before using it in path
+      if (!this.slug) {
+        throw new Error("Slug must be generated before calculating path");
+      }
+      
+      this.path = `${parent.path}/${this.slug}`;
+      this.level = parent.level + 1;
+      
+      // Sync legacy field for backward compatibility
+      if (parent._id) {
+        this.parentTopic = parent._id as Types.ObjectId;
       }
     } else {
       // No parent - this is a root topic
+      if (!this.slug) {
+        throw new Error("Slug must be generated before calculating path");
+      }
       this.path = `/${this.slug}`;
       this.level = 0;
       this.parentTopic = undefined;
