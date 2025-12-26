@@ -1,7 +1,6 @@
 import { Model, Types } from "mongoose";
 
 export type TRefType = "book" | "article" | "hadith" | "quran";
-export type TStance = "supporting" | "opposing" | "neutral";
 
 export type TReferences = {
   slug: string;
@@ -14,7 +13,6 @@ export type TReferences = {
   verified: boolean;
   verifiedBy?: Types.ObjectId;
   createdBy: Types.ObjectId;
-  stance: TStance;
 };
 
 export type ReferenceModel = {

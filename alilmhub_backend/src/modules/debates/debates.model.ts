@@ -57,7 +57,7 @@ const debateSchema = new Schema<IDebateDocument>(
     },
     stance: {
       type: String,
-      enum: ["supporting", "opposing"],
+      enum: ["supporting", "opposing", "neutral"],
       required: true,
     },
     viewsCount: {

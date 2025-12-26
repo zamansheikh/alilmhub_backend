@@ -48,11 +48,6 @@ const referenceSchema = new Schema<TReferences>(
       ref: "User",
       required: true,
     },
-    stance: {
-      type: String,
-      enum: ["supporting", "opposing", "neutral"],
-      default: "neutral",
-    },
   },
   {
     timestamps: true,

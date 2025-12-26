@@ -1,7 +1,7 @@
 import { Model, Types, Document } from "mongoose";
 
 export type TDebateStatus = "open" | "closed" | "archived";
-export type TDebateStance = "supporting" | "opposing";
+export type TDebateStance = "supporting" | "opposing" | "neutral";
 
 export type TDebates = {
   slug: string;
