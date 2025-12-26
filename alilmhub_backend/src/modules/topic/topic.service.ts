@@ -4,6 +4,8 @@ import AppError from "../../errors/AppError";
 import { Topic } from "./topic.model";
 import { TTopic, TTopicTreeNode } from "./topic.interface";
 import { QueryBuilder } from "../../shared/builder/QueryBuilder";
+import { Reference } from "../references/references.model";
+import { Debate } from "../debates/debates.model";
 
 const createTopic = async (payload: Partial<TTopic>, userId?: string) => {
   if (!userId) {
@@ -100,6 +102,20 @@ const getTopicBySlug = async (slug: string) => {
       .lean();
   }
 
+  // Fetch full reference data by slugs
+  const referencesData = topic.references && topic.references.length > 0
+    ? await Reference.find({ slug: { $in: topic.references } })
+        .select("slug type title author citationText sourceUrl verified")
+        .lean()
+    : [];
+
+  // Fetch full debate data by slugs
+  const debatesData = topic.debates && topic.debates.length > 0
+    ? await Debate.find({ slug: { $in: topic.debates }, isDeleted: { $ne: true } })
+        .select("slug title stance status supportingVotesCount opposingVotesCount")
+        .lean()
+    : [];
+
   // Fire-and-forget view count increment (non-blocking)
   Topic.findOneAndUpdate({ slug }, { $inc: { viewCount: 1 } }).exec();
 
@@ -111,6 +127,8 @@ const getTopicBySlug = async (slug: string) => {
     parent,
     breadcrumb,
     breadcrumbPath,
+    referencesData,
+    debatesData,
   };
 };
 

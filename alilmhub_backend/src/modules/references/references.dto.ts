@@ -12,8 +12,6 @@ const createReference = z.object({
     citationText: z.string().trim().optional(),
     sourceUrl: z.url("Invalid URL format").trim().optional(),
     sourceLanguage: z.string().max(50).trim().optional(),
-    stance: z.enum(["supporting", "opposing", "neutral"]).default("neutral"),
-    
   }),
 });
 
@@ -31,7 +29,6 @@ const updateReference = z.object({
     sourceUrl: z.url("Invalid URL format").trim().optional(),
     sourceLanguage: z.string().max(50).trim().optional(),
     verified: z.boolean().optional(),
-    stance: z.enum(["supporting", "opposing", "neutral"]).optional(),
   }),
 });
 

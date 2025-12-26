@@ -21,8 +21,8 @@ const createDebate = z.object({
       .min(1, "Description is required")
       .max(5000, "Description cannot exceed 5000 characters")
       .trim(),
-    stance: z.enum(["supporting", "opposing"], {
-      message: "Stance must be either 'supporting' or 'opposing'",
+    stance: z.enum(["supporting", "opposing", "neutral"], {
+      message: "Stance must be 'supporting', 'opposing', or 'neutral'",
     }),
     references: z
       .array(
@@ -55,7 +55,7 @@ const updateDebate = z.object({
       .max(5000, "Description cannot exceed 5000 characters")
       .trim()
       .optional(),
-    stance: z.enum(["supporting", "opposing"]).optional(),
+    stance: z.enum(["supporting", "opposing", "neutral"]).optional(),
     status: z.enum(["open", "closed", "archived"]).optional(),
     references: z
       .array(
