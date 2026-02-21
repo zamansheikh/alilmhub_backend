@@ -567,6 +567,51 @@ const getTopicsByPath = async (path: string) => {
 };
 
 // ============================================================================
+// TREE MANAGEMENT SERVICES
+// ============================================================================
+
+const updateTopicParent = async (slug: string, newParentId?: string | undefined, userId?: string) => {
+  const topic = await Topic.findOne({ slug, isDeleted: { $ne: true } });
+  
+  if (!topic) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Topic not found");
+  }
+
+  // Prevent circular references (topic cannot be parent of itself)
+  if (newParentId && newParentId === topic.id) {
+    throw new AppError(StatusCodes.BAD_REQUEST, "A topic cannot be parent of itself");
+  }
+
+  if (newParentId) {
+    // Verify the parent exists
+    const newParent = await Topic.findOne({
+      $or: [
+        { id: newParentId },
+        { slug: newParentId }
+      ],
+      isDeleted: { $ne: true }
+    });
+    
+    if (!newParent) {
+      throw new AppError(StatusCodes.NOT_FOUND, "Parent topic not found");
+    }
+
+    // Check for circular reference: ensure topic is not an ancestor of newParent
+    const pathSegments = newParent.path.split('/').filter((s: string) => Boolean(s));
+    if (pathSegments.includes(topic.slug)) {
+      throw new AppError(StatusCodes.BAD_REQUEST, "Cannot create circular parent-child relationship");
+    }
+  }
+
+  // Update parent (will trigger pre-save hook for path recalculation)
+  // undefined means root topic (no parent)
+  topic.parentId = newParentId;
+  await topic.save();
+
+  return topic;
+};
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -592,4 +637,7 @@ export const TopicServices = {
   getTopicChildren,
   getTopicSubtree,
   getTopicsByPath,
+  
+  // Tree management services
+  updateTopicParent,
 };

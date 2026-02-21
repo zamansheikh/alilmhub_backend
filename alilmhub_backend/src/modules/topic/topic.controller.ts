@@ -200,6 +200,26 @@ const getTopicsByPath = catchAsync(async (req: Request, res: Response) => {
 });
 
 // ============================================================================
+// TREE MANAGEMENT CONTROLLERS
+// ============================================================================
+
+const updateTopicParent = catchAsync(async (req: Request, res: Response) => {
+  const { parentId } = req.body;
+  const userId = req.user?._id?.toString();
+  const topic = await TopicServices.updateTopicParent(
+    req.params.slug as string,
+    parentId || undefined,
+    userId
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Topic parent updated successfully",
+    data: topic,
+  });
+});
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -225,4 +245,7 @@ export const TopicController = {
   getTopicChildren,
   getTopicSubtree,
   getTopicsByPath,
+  
+  // Tree management
+  updateTopicParent,
 };

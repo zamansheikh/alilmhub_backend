@@ -91,6 +91,17 @@ router.get("/:slug/sub-topics", TopicController.getSubTopics);
 router.get("/:slug", TopicController.getTopicBySlug);
 
 /**
+ * @route   PATCH /api/v1/topic/:slug/parent
+ * @desc    Update topic parent (for tree management)
+ * @access  Private (scholar, super_admin)
+ */
+router.patch(
+  "/:slug/parent",
+  auth("scholar", "super_admin"),
+  TopicController.updateTopicParent
+);
+
+/**
  * @route   PATCH /api/v1/topic/:slug
  * @desc    Update topic
  * @access  Private
