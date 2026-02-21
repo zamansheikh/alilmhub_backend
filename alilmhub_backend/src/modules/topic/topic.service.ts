@@ -6,6 +6,7 @@ import { TTopic, TTopicTreeNode, TReviewAction } from "./topic.interface";
 import { QueryBuilder } from "../../shared/builder/QueryBuilder";
 import { Reference } from "../references/references.model";
 import { Debate } from "../debates/debates.model";
+import { Discussion } from "../discussions/discussions.model";
 
 const createTopic = async (payload: Partial<TTopic>, userId?: string) => {
   if (!userId) {
@@ -25,19 +26,30 @@ const createTopic = async (payload: Partial<TTopic>, userId?: string) => {
   // Remove legacy field - middleware will sync it
   delete sanitizedPayload.parentTopic;
   
+  // Remove updatedBy if it's a string like "current_user"
+  if (sanitizedPayload.updatedBy === "current_user") {
+    delete sanitizedPayload.updatedBy;
+  }
+  
   // Validate parent exists if parentId is provided
   if (sanitizedPayload.parentId) {
     const parentTopic = await Topic.findOne({ 
-      id: sanitizedPayload.parentId, 
+      $or: [
+        { id: sanitizedPayload.parentId },
+        { slug: sanitizedPayload.parentId }
+      ],
       isDeleted: { $ne: true } 
     });
     
     if (!parentTopic) {
       throw new AppError(
         StatusCodes.BAD_REQUEST, 
-        `Parent topic with id "${sanitizedPayload.parentId}" not found or has been deleted`
+        `Parent topic with id or slug "${sanitizedPayload.parentId}" not found or has been deleted`
       );
     }
+    
+    // Ensure we use the actual ID, not the slug, for the parentId field
+    sanitizedPayload.parentId = parentTopic.id;
   }
   
   const topicData = {
@@ -102,17 +114,79 @@ const getTopicBySlug = async (slug: string) => {
       .lean();
   }
 
+  // Resolve effective reference slugs: use stored array first, then fall back to inline extraction
+  let effectiveRefSlugs: string[] = topic.references && topic.references.length > 0
+    ? topic.references
+    : [];
+
+  if (effectiveRefSlugs.length === 0 && topic.wikiContent) {
+    // Extract [ref:slug/stance] patterns from wikiContent
+    const inlineRefRegex = /\[ref:([a-zA-Z0-9_-]+)\/(?:supporting|opposing|neutral)\]/g;
+    const inlineSlugs = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = inlineRefRegex.exec(topic.wikiContent)) !== null) {
+      inlineSlugs.add(m[1]);
+    }
+    if (inlineSlugs.size > 0) {
+      effectiveRefSlugs = Array.from(inlineSlugs);
+      // Persist back to DB so future queries are instant
+      Topic.findOneAndUpdate({ slug }, { $set: { references: effectiveRefSlugs } }).exec();
+    }
+  }
+
   // Fetch full reference data by slugs
-  const referencesData = topic.references && topic.references.length > 0
-    ? await Reference.find({ slug: { $in: topic.references } })
-        .select("slug type title author citationText sourceUrl verified")
+  const referencesData = effectiveRefSlugs.length > 0
+    ? await Reference.find({ slug: { $in: effectiveRefSlugs } })
+        .select("slug type title author citationText sourceUrl verified sourceLanguage")
         .lean()
     : [];
 
-  // Fetch full debate data by slugs
-  const debatesData = topic.debates && topic.debates.length > 0
-    ? await Debate.find({ slug: { $in: topic.debates }, isDeleted: { $ne: true } })
-        .select("slug title stance status supportingVotesCount opposingVotesCount")
+  // Fetch full debate data by slugs (also extract inline debates from wikiContent)
+  let effectiveDebateSlugs: string[] = topic.debates && topic.debates.length > 0
+    ? topic.debates
+    : [];
+
+  if (effectiveDebateSlugs.length === 0 && topic.wikiContent) {
+    const inlineDebateRegex = /\[debate:([a-zA-Z0-9_-]+)\/(?:supporting|opposing|neutral)\]/g;
+    const debateSlugs = new Set<string>();
+    let dm: RegExpExecArray | null;
+    while ((dm = inlineDebateRegex.exec(topic.wikiContent)) !== null) {
+      debateSlugs.add(dm[1]);
+    }
+    if (debateSlugs.size > 0) {
+      effectiveDebateSlugs = Array.from(debateSlugs);
+      Topic.findOneAndUpdate({ slug }, { $set: { debates: effectiveDebateSlugs } }).exec();
+    }
+  }
+
+  const debatesData = effectiveDebateSlugs.length > 0
+    ? await Debate.find({ slug: { $in: effectiveDebateSlugs }, isDeleted: { $ne: true } })
+        .select("slug title stance status supportingVotesCount opposingVotesCount summary")
+        .lean()
+    : [];
+
+  // Fetch full discussion data by slugs (also extract inline discussions from wikiContent)
+  let effectiveDiscussionSlugs: string[] = topic.discussions && topic.discussions.length > 0
+    ? topic.discussions
+    : [];
+
+  if (effectiveDiscussionSlugs.length === 0 && topic.wikiContent) {
+    const inlineDiscussionRegex = /\[discussion:([a-zA-Z0-9_-]+)\/(?:supporting|opposing|neutral)\]/g;
+    const discussionSlugs = new Set<string>();
+    let dsm: RegExpExecArray | null;
+    while ((dsm = inlineDiscussionRegex.exec(topic.wikiContent)) !== null) {
+      discussionSlugs.add(dsm[1]);
+    }
+    if (discussionSlugs.size > 0) {
+      effectiveDiscussionSlugs = Array.from(discussionSlugs);
+      Topic.findOneAndUpdate({ slug }, { $set: { discussions: effectiveDiscussionSlugs } }).exec();
+    }
+  }
+
+  const discussionsData = effectiveDiscussionSlugs.length > 0
+    ? await Discussion.find({ slug: { $in: effectiveDiscussionSlugs }, isDeleted: { $ne: true } })
+        .select("slug title description status supportingCount opposingCount author opinions viewsCount createdAt")
+        .populate("author", "name email profileImage")
         .lean()
     : [];
 
@@ -124,11 +198,15 @@ const getTopicBySlug = async (slug: string) => {
 
   return {
     ...topic.toObject(),
+    references: effectiveRefSlugs,
+    debates: effectiveDebateSlugs,
+    discussions: effectiveDiscussionSlugs,
     parent,
     breadcrumb,
     breadcrumbPath,
     referencesData,
     debatesData,
+    discussionsData,
   };
 };
 
@@ -325,17 +403,38 @@ const updateTopicContent = async (
     throw new AppError(StatusCodes.NOT_FOUND, "Topic not found");
   }
 
-  // Calculate actual changes
-  const changes = calculateContentChanges(
-    topic.contentBlocks,
-    newContent.contentBlocks
-  );
+  // Use the submitted contentBlocks if provided and non-empty;
+  // otherwise fall back to the current live blocks so we never store an empty snapshot.
+  const submittedBlocks: any[] =
+    Array.isArray(newContent.contentBlocks) && newContent.contentBlocks.length > 0
+      ? newContent.contentBlocks
+      : topic.contentBlocks;
 
-  // Create version with changes
+  // Compute block-level changes (will be empty when only wikiContent changed)
+  const blockChanges = calculateContentChanges(topic.contentBlocks, submittedBlocks);
+
+  // When the editor only changes wikiContent (no block-level diff), synthesise a
+  // single wikiContent diff entry so reviewers can see what changed.
+  const changes: any[] = blockChanges.length > 0 ? blockChanges : [];
+  if (
+    blockChanges.length === 0 &&
+    newContent.wikiContent &&
+    newContent.wikiContent !== topic.wikiContent
+  ) {
+    changes.push({
+      blockId: "wikiContent",
+      oldText: topic.wikiContent ?? "",
+      newText: newContent.wikiContent,
+      diff: `wikiContent changed`,
+    });
+  }
+
+  // Create version with changes — live content is NOT modified until approved
   await topic.createNewVersion(
     new Types.ObjectId(userId),
     changes,
-    newContent.contentBlocks
+    submittedBlocks,
+    newContent.wikiContent
   );
 
   return topic;
@@ -415,13 +514,19 @@ const reviewTopicVersion = async (
   version.reviewedBy = new Types.ObjectId(reviewerId);
   if (payload.reviewNote) version.reviewNote = payload.reviewNote;
 
-  // If approved, update the live contentBlocks
+  // If approved, update the live wikiContent and contentBlocks
   if (payload.action === "approve") {
-    topic.contentBlocks = version.contentBlocks;
-    topic.wikiContent = version.contentBlocks
-      .flatMap((b: any) => b.units)
-      .map((u: any) => u.content)
-      .join("\n\n");
+    // Always prefer wikiContent from the version (user's edit)
+    if (version.wikiContent) {
+      topic.wikiContent = version.wikiContent;
+    }
+    
+    // Only update contentBlocks if the version has them; otherwise keep current
+    if (version.contentBlocks && version.contentBlocks.length > 0) {
+      topic.contentBlocks = version.contentBlocks;
+    }
+    // If version has no contentBlocks but submission did change wikiContent,
+    // the contentBlocks will be recalculated by pre-save middleware if needed
   }
 
   await topic.save();

@@ -65,8 +65,8 @@ const contentBlockSchema = new Schema<TContentBlock>(
 const contentChangeSchema = new Schema<TContentChange>(
   {
     blockId: { type: String, required: true },
-    unitId: { type: String, required: true },
-    spanIndex: { type: Number, required: true },
+    unitId: { type: String, required: false },
+    spanIndex: { type: Number, required: false },
     oldText: { type: String, required: true },
     newText: { type: String, required: true },
     diff: { type: String, required: true },
@@ -81,6 +81,7 @@ const versionSchema = new Schema<TVersion>(
     changedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     changes: [contentChangeSchema],
     contentBlocks: [contentBlockSchema],
+    wikiContent: { type: String },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
@@ -355,11 +356,20 @@ topicSchema.pre("save", async function (next) {
         throw new Error("A topic cannot be its own parent");
       }
       
-      const parent = await Topic.findOne({ id: this.parentId, isDeleted: { $ne: true } });
+      const parent = await Topic.findOne({ 
+        $or: [
+          { id: this.parentId },
+          { slug: this.parentId }
+        ],
+        isDeleted: { $ne: true } 
+      });
       if (!parent) {
         // FIXED: Throw error instead of silently making it root
-        throw new Error(`Parent topic with id "${this.parentId}" not found or has been deleted`);
+        throw new Error(`Parent topic with id or slug "${this.parentId}" not found or has been deleted`);
       }
+      
+      // Ensure we use the actual ID, not the slug, for the parentId field
+      this.parentId = parent.id;
       
       // Check if current topic is an ancestor of the new parent
       // This prevents circular hierarchies (A → B → C → A)
@@ -481,7 +491,8 @@ topicSchema.methods.getVersion = function (versionId: string) {
 topicSchema.methods.createNewVersion = async function (
   userId: Types.ObjectId,
   changes: TContentChange[],
-  newContent: TContentBlock[]
+  newContent: TContentBlock[],
+  wikiContent?: string
 ) {
   const nextVersionNumber = this.versions.length + 1;
   const newVersion: TVersion = {
@@ -490,18 +501,17 @@ topicSchema.methods.createNewVersion = async function (
     changedBy: userId,
     changes: changes,
     contentBlocks: newContent,
+    wikiContent: wikiContent,
     status: "pending",
   };
 
   this.versions.push(newVersion);
-  this.contentBlocks = newContent;
+  // NOTE: do NOT overwrite live contentBlocks / wikiContent here.
+  // The live content is only updated when the version is *approved*
+  // (see reviewTopicVersion in topic.service.ts).
   this.updatedBy = userId;
   this.editCount = this.versions.length - 1;
   this.editsCount = this.editCount;
-
-  // Update denormalized references and debates
-  this.references = this.extractReferences(newContent);
-  this.debates = this.extractDebates(newContent);
 
   await this.save();
 };

@@ -46,8 +46,8 @@ export type TContentBlock = {
  */
 export type TContentChange = {
   blockId: string;
-  unitId: string;
-  spanIndex: number;
+  unitId?: string;
+  spanIndex?: number;
   oldText: string;
   newText: string;
   diff: string;
@@ -62,6 +62,7 @@ export type TVersion = {
   changedBy: Types.ObjectId;
   changes?: TContentChange[];
   contentBlocks: TContentBlock[];
+  wikiContent?: string;
   status: "pending" | "approved" | "rejected";
   reviewedAt?: Date;
   reviewedBy?: Types.ObjectId;
@@ -157,7 +158,8 @@ export interface ITopicDocument extends Omit<TTopic, 'id'>, Document {
   createNewVersion(
     userId: Types.ObjectId,
     changes: TContentChange[],
-    newContent: TContentBlock[]
+    newContent: TContentBlock[],
+    wikiContent?: string
   ): Promise<void>;
   
   // Content extraction methods
