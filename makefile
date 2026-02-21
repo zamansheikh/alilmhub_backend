@@ -16,13 +16,13 @@ logs-dev:
 
 # Production
 prod:
-	docker-compose -f docker-compose.prod.yml up --build
+	(docker-compose -v && docker-compose -f docker-compose.prod.yml up --build) || (docker compose -f docker-compose.prod.yml up --build)
 
 prod-d:
-	docker-compose -f docker-compose.prod.yml up --build -d
+	(docker-compose -v && docker-compose -f docker-compose.prod.yml up --build -d) || (docker compose -f docker-compose.prod.yml up --build -d)
 
 stop-prod:
-	docker-compose -f docker-compose.prod.yml down 
+	(docker-compose -v && docker-compose -f docker-compose.prod.yml down) || (docker compose -f docker-compose.prod.yml down)
 
 logs-prod:
 	docker-compose -f docker-compose.prod.yml logs -f

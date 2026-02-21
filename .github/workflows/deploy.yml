@@ -1,0 +1,55 @@
+name: Deploy ALILMHUB Backend
+
+on:
+  push:
+    branches:
+      - main # Adjust this to yours (could be 'master')
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 31.97.15.225 >> ~/.ssh/known_hosts
+
+      - name: Create project directory and .env on server
+        run: |
+          ssh root@31.97.15.225 "mkdir -p /root/alilmhub-backend"
+
+      - name: Deploy files with Rsync
+        run: |
+          rsync -avz --delete \
+            --exclude '.git/' \
+            --exclude 'node_modules/' \
+            --exclude 'logs/' \
+            --exclude '.env' \
+            --exclude '.env.development' \
+            ./ root@31.97.15.225:/root/alilmhub-backend/
+
+      - name: Write production environment variables
+        env:
+          PROD_ENV: ${{ secrets.PROD_ENV_FILE }}
+        run: |
+          # Only write if PROD_ENV secret exists
+          if [ -n "$PROD_ENV" ]; then
+            ssh root@31.97.15.225 "echo '$PROD_ENV' > /root/alilmhub-backend/alilmhub_backend/.env.production"
+          else
+            echo "Warning: PROD_ENV_FILE secret is not set, using default if available on server."
+          fi
+
+      - name: Build and Run with Docker Compose
+        run: |
+          ssh root@31.97.15.225 "cd /root/alilmhub-backend && make prod-d"
+
+      - name: Prune old images
+        run: |
+          ssh root@31.97.15.225 "docker image prune -f"
