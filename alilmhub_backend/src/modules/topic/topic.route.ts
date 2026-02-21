@@ -148,11 +148,11 @@ router.put(
 /**
  * @route   PATCH /api/v1/topic/:slug/versions/:versionId/review
  * @desc    Approve or reject a pending version (reviewer only)
- * @access  Private (reviewer, scholar, superadmin)
+ * @access  Private (reviewer, scholar, super_admin)
  */
 router.patch(
   "/:slug/versions/:versionId/review",
-  auth("reviewer", "scholar", "superadmin"),
+  auth("reviewer", "scholar", "super_admin"),
   validateRequest(TopicValidation.reviewVersion),
   TopicController.reviewTopicVersion
 );
