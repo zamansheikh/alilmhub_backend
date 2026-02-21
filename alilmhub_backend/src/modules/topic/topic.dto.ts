@@ -150,6 +150,17 @@ const getVersion = z.object({
   }),
 });
 
+const reviewVersion = z.object({
+  params: z.object({
+    slug: z.string(),
+    versionId: z.string(),
+  }),
+  body: z.object({
+    action: z.enum(["approve", "reject"]),
+    reviewNote: z.string().optional(),
+  }),
+});
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -164,4 +175,5 @@ export const TopicValidation = {
   // New validators
   updateTopicContent,
   getVersion,
+  reviewVersion,
 };

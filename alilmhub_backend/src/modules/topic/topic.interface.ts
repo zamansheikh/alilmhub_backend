@@ -62,6 +62,18 @@ export type TVersion = {
   changedBy: Types.ObjectId;
   changes?: TContentChange[];
   contentBlocks: TContentBlock[];
+  status: "pending" | "approved" | "rejected";
+  reviewedAt?: Date;
+  reviewedBy?: Types.ObjectId;
+  reviewNote?: string;
+};
+
+/**
+ * REVIEW ACTION: approve or reject a pending version
+ */
+export type TReviewAction = {
+  action: "approve" | "reject";
+  reviewNote?: string;
 };
 
 // ============================================================================

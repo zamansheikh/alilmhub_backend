@@ -145,4 +145,16 @@ router.put(
   TopicController.updateTopicContent
 );
 
+/**
+ * @route   PATCH /api/v1/topic/:slug/versions/:versionId/review
+ * @desc    Approve or reject a pending version (reviewer only)
+ * @access  Private (reviewer, scholar, superadmin)
+ */
+router.patch(
+  "/:slug/versions/:versionId/review",
+  auth("reviewer", "scholar", "superadmin"),
+  validateRequest(TopicValidation.reviewVersion),
+  TopicController.reviewTopicVersion
+);
+
 export const TopicRoutes: Router = router;

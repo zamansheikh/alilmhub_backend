@@ -27,7 +27,7 @@ const getAllTopics = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getTopicBySlug = catchAsync(async (req: Request, res: Response) => {
-  const topic = await TopicServices.getTopicBySlug(req.params.slug);
+  const topic = await TopicServices.getTopicBySlug(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -39,7 +39,7 @@ const getTopicBySlug = catchAsync(async (req: Request, res: Response) => {
 const updateTopic = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
   const topic = await TopicServices.updateTopic(
-    req.params.slug,
+    req.params.slug as string,
     req.body,
     userId
   );
@@ -53,7 +53,7 @@ const updateTopic = catchAsync(async (req: Request, res: Response) => {
 
 const deleteTopic = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
-  await TopicServices.deleteTopic(req.params.slug, userId);
+  await TopicServices.deleteTopic(req.params.slug as string, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -64,7 +64,7 @@ const deleteTopic = catchAsync(async (req: Request, res: Response) => {
 
 const addReferences = catchAsync(async (req: Request, res: Response) => {
   const { referenceIds } = req.body;
-  const topic = await TopicServices.addReferences(req.params.slug, referenceIds);
+  const topic = await TopicServices.addReferences(req.params.slug as string, referenceIds);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -76,7 +76,7 @@ const addReferences = catchAsync(async (req: Request, res: Response) => {
 const removeReferences = catchAsync(async (req: Request, res: Response) => {
   const { referenceIds } = req.body;
   const topic = await TopicServices.removeReferences(
-    req.params.slug,
+    req.params.slug as string,
     referenceIds
   );
   sendResponse(res, {
@@ -88,7 +88,7 @@ const removeReferences = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getSubTopics = catchAsync(async (req: Request, res: Response) => {
-  const subTopics = await TopicServices.getSubTopics(req.params.slug);
+  const subTopics = await TopicServices.getSubTopics(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -112,7 +112,7 @@ const getKnowledgeTree = catchAsync(async (req: Request, res: Response) => {
 // ============================================================================
 
 const getTopicVersions = catchAsync(async (req: Request, res: Response) => {
-  const versions = await TopicServices.getTopicVersions(req.params.slug);
+  const versions = await TopicServices.getTopicVersions(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -123,8 +123,8 @@ const getTopicVersions = catchAsync(async (req: Request, res: Response) => {
 
 const getTopicVersion = catchAsync(async (req: Request, res: Response) => {
   const version = await TopicServices.getTopicVersion(
-    req.params.slug,
-    req.params.versionId
+    req.params.slug as string,
+    req.params.versionId as string
   );
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -137,7 +137,7 @@ const getTopicVersion = catchAsync(async (req: Request, res: Response) => {
 const updateTopicContent = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
   const topic = await TopicServices.updateTopicContent(
-    req.params.slug,
+    req.params.slug as string,
     req.body,
     userId
   );
@@ -149,12 +149,28 @@ const updateTopicContent = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const reviewTopicVersion = catchAsync(async (req: Request, res: Response) => {
+  const reviewerId = req.user?._id?.toString();
+  const result = await TopicServices.reviewTopicVersion(
+    req.params.slug as string,
+    req.params.versionId as string,
+    reviewerId,
+    req.body
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: `Version ${req.body.action}d successfully`,
+    data: result,
+  });
+});
+
 // ============================================================================
 // NEW CONTROLLERS FOR HIERARCHY
 // ============================================================================
 
 const getTopicChildren = catchAsync(async (req: Request, res: Response) => {
-  const children = await TopicServices.getTopicChildren(req.params.slug);
+  const children = await TopicServices.getTopicChildren(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -164,7 +180,7 @@ const getTopicChildren = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getTopicSubtree = catchAsync(async (req: Request, res: Response) => {
-  const subtree = await TopicServices.getTopicSubtree(req.params.slug);
+  const subtree = await TopicServices.getTopicSubtree(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -203,7 +219,8 @@ export const TopicController = {
   getTopicVersions,
   getTopicVersion,
   updateTopicContent,
-  
+  reviewTopicVersion,
+
   // New hierarchy controllers
   getTopicChildren,
   getTopicSubtree,

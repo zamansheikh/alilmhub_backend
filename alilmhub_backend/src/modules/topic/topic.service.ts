@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import { Types } from "mongoose";
 import AppError from "../../errors/AppError";
 import { Topic } from "./topic.model";
-import { TTopic, TTopicTreeNode } from "./topic.interface";
+import { TTopic, TTopicTreeNode, TReviewAction } from "./topic.interface";
 import { QueryBuilder } from "../../shared/builder/QueryBuilder";
 import { Reference } from "../references/references.model";
 import { Debate } from "../debates/debates.model";
@@ -383,6 +383,52 @@ const calculateContentChanges = (
 };
 
 // ============================================================================
+// NEW SERVICES FOR VERSION REVIEW
+// ============================================================================
+
+const reviewTopicVersion = async (
+  slug: string,
+  versionId: string,
+  reviewerId: string,
+  payload: TReviewAction
+) => {
+  const topic = await Topic.findOne({ slug, isDeleted: { $ne: true } });
+  if (!topic) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Topic not found");
+  }
+
+  const version = (topic.versions as any[]).find(
+    (v: any) => v.versionId === versionId
+  );
+  if (!version) {
+    throw new AppError(StatusCodes.NOT_FOUND, "Version not found");
+  }
+  if (version.status !== "pending") {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      "Version has already been reviewed"
+    );
+  }
+
+  version.status = payload.action === "approve" ? "approved" : "rejected";
+  version.reviewedAt = new Date();
+  version.reviewedBy = new Types.ObjectId(reviewerId);
+  if (payload.reviewNote) version.reviewNote = payload.reviewNote;
+
+  // If approved, update the live contentBlocks
+  if (payload.action === "approve") {
+    topic.contentBlocks = version.contentBlocks;
+    topic.wikiContent = version.contentBlocks
+      .flatMap((b: any) => b.units)
+      .map((u: any) => u.content)
+      .join("\n\n");
+  }
+
+  await topic.save();
+  return { version, topic };
+};
+
+// ============================================================================
 // NEW SERVICES FOR HIERARCHY
 // ============================================================================
 
@@ -435,7 +481,8 @@ export const TopicServices = {
   getTopicVersions,
   getTopicVersion,
   updateTopicContent,
-  
+  reviewTopicVersion,
+
   // New hierarchy services
   getTopicChildren,
   getTopicSubtree,

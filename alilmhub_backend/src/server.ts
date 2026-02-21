@@ -41,7 +41,8 @@ async function main() {
     console.log(port, "port");
     // await redisClient.connect();
 
-    server.listen(port, config.ip_address as string, () => {
+    // Bind to all interfaces (avoids issues with WSL/Docker bridge IPs)
+    server.listen(port, () => {
       logger.info(
         colors.yellow(
           `♻️  Application listening ${config.ip_address} on port:${config.port}`

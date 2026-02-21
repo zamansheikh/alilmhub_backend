@@ -81,6 +81,14 @@ const versionSchema = new Schema<TVersion>(
     changedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     changes: [contentChangeSchema],
     contentBlocks: [contentBlockSchema],
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    reviewedAt: { type: Date },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    reviewNote: { type: String },
   },
   { _id: false }
 );
@@ -482,6 +490,7 @@ topicSchema.methods.createNewVersion = async function (
     changedBy: userId,
     changes: changes,
     contentBlocks: newContent,
+    status: "pending",
   };
 
   this.versions.push(newVersion);
