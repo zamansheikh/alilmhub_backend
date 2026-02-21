@@ -27,7 +27,7 @@ const getAllDebates = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getDebateBySlug = catchAsync(async (req: Request, res: Response) => {
-  const debate = await DebateServices.getDebateBySlug(req.params.slug);
+  const debate = await DebateServices.getDebateBySlug(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -39,7 +39,7 @@ const getDebateBySlug = catchAsync(async (req: Request, res: Response) => {
 const updateDebate = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
   const debate = await DebateServices.updateDebate(
-    req.params.slug,
+    req.params.slug as string,
     req.body,
     userId
   );
@@ -53,7 +53,7 @@ const updateDebate = catchAsync(async (req: Request, res: Response) => {
 
 const deleteDebate = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
-  await DebateServices.deleteDebate(req.params.slug, userId);
+  await DebateServices.deleteDebate(req.params.slug as string, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -64,7 +64,7 @@ const deleteDebate = catchAsync(async (req: Request, res: Response) => {
 
 const addReferences = catchAsync(async (req: Request, res: Response) => {
   const { referenceIds } = req.body;
-  const debate = await DebateServices.addReferences(req.params.slug, referenceIds);
+  const debate = await DebateServices.addReferences(req.params.slug as string, referenceIds);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -76,7 +76,7 @@ const addReferences = catchAsync(async (req: Request, res: Response) => {
 const removeReferences = catchAsync(async (req: Request, res: Response) => {
   const { referenceIds } = req.body;
   const debate = await DebateServices.removeReferences(
-    req.params.slug,
+    req.params.slug as string,
     referenceIds
   );
   sendResponse(res, {
@@ -90,7 +90,7 @@ const removeReferences = catchAsync(async (req: Request, res: Response) => {
 const joinDebate = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
   const { side } = req.body;
-  const debate = await DebateServices.joinDebate(req.params.slug, userId, side);
+  const debate = await DebateServices.joinDebate(req.params.slug as string, userId, side);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -101,7 +101,7 @@ const joinDebate = catchAsync(async (req: Request, res: Response) => {
 
 const leaveDebate = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
-  const debate = await DebateServices.leaveDebate(req.params.slug, userId);
+  const debate = await DebateServices.leaveDebate(req.params.slug as string, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -113,7 +113,7 @@ const leaveDebate = catchAsync(async (req: Request, res: Response) => {
 const updateStatus = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
   const { status } = req.body;
-  const debate = await DebateServices.updateStatus(req.params.slug, status, userId);
+  const debate = await DebateServices.updateStatus(req.params.slug as string, status, userId);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -124,7 +124,7 @@ const updateStatus = catchAsync(async (req: Request, res: Response) => {
 
 const getDebatesByTopic = catchAsync(async (req: Request, res: Response) => {
   const debatesRes = await DebateServices.getDebatesByTopic(
-    req.params.topicId,
+    req.params.topicId as string,
     req.query
   );
   sendResponse(res, {
@@ -138,7 +138,7 @@ const getDebatesByTopic = catchAsync(async (req: Request, res: Response) => {
 
 const getDebatesByUser = catchAsync(async (req: Request, res: Response) => {
   const debatesRes = await DebateServices.getDebatesByUser(
-    req.params.userId,
+    req.params.userId as string,
     req.query
   );
   sendResponse(res, {

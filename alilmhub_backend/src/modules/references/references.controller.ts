@@ -27,7 +27,7 @@ const getAllReferences = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getReferenceBySlug = catchAsync(async (req: Request, res: Response) => {
-  const reference = await ReferenceServices.getReferenceBySlug(req?.params?.slug);
+  const reference = await ReferenceServices.getReferenceBySlug(req?.params?.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -38,7 +38,7 @@ const getReferenceBySlug = catchAsync(async (req: Request, res: Response) => {
 
 const updateReference = catchAsync(async (req: Request, res: Response) => {
   const reference = await ReferenceServices.updateReference(
-    req.params.slug,
+    req.params.slug as string,
     req.body
   );
   sendResponse(res, {
@@ -50,7 +50,7 @@ const updateReference = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteReference = catchAsync(async (req: Request, res: Response) => {
-  await ReferenceServices.deleteReference(req.params.slug);
+  await ReferenceServices.deleteReference(req.params.slug as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -62,7 +62,7 @@ const deleteReference = catchAsync(async (req: Request, res: Response) => {
 const verifyReference = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id?.toString();
   const reference = await ReferenceServices.verifyReference(
-    req.params.slug,
+    req.params.slug as string,
     userId
   );
   sendResponse(res, {

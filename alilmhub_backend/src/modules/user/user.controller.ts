@@ -16,7 +16,7 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserById = catchAsync(async (req: Request, res: Response) => {
-  const user = await UserServices.getUserById(req.params.id);
+  const user = await UserServices.getUserById(req.params.id as string);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -40,7 +40,7 @@ const updateUser = catchAsync(async (req: Request, res: Response) => {
     delete userData.image;
   }
 
-  const user = await UserServices.updateUser(req.params.id, userData);
+  const user = await UserServices.updateUser(req.params.id as string, userData);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -53,7 +53,7 @@ const updateUserActivationStatus = catchAsync(
   async (req: Request, res: Response) => {
     const { status } = req.body;
     const user = await UserServices.updateUserActivationStatus(
-      req.params.id,
+      req.params.id as string,
       status
     );
     sendResponse(res, {
@@ -69,7 +69,7 @@ const updateUserActivationStatus = catchAsync(
 
 const updateUserRole = catchAsync(async (req: Request, res: Response) => {
   const { role } = req.body;
-  const user = await UserServices.updateUserRole(req.params.id, role);
+  const user = await UserServices.updateUserRole(req.params.id as string, role);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
