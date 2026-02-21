@@ -11,7 +11,9 @@
     "resolveJsonModule": true,                  // Let you import JSON files
     "noEmitOnError": true,                      // Prevent JS emit if there's a TypeScript error
     "declaration": true,                        // Emit .d.ts files (great for library projects)
-    "sourceMap": true                           // Emit source maps for debugging
+    "sourceMap": true,                          // Emit source maps for debugging
+    "outDir": "./dist",                         // Directory for output JS
+    "rootDir": "./src"                         // Directory for source files
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
