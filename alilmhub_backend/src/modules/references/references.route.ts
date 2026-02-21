@@ -65,8 +65,8 @@ router.delete("/:slug", auth(), ReferenceController.deleteReference);
 /**
  * @route   PATCH /api/v1/reference/:slug/verify
  * @desc    Verify reference
- * @access  Private (Reviewer/Scholar)
+ * @access  Private (Reviewer / Scholar / Super Admin)
  */
-router.patch("/:slug/verify", auth(), ReferenceController.verifyReference);
+router.patch("/:slug/verify", auth("reviewer", "scholar", "super_admin"), ReferenceController.verifyReference);
 
 export const ReferenceRoutes: Router = router;
