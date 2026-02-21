@@ -10,9 +10,9 @@ const router = express.Router();
 /**
  * @route   GET /api/v1/user/get-all-users
  * @desc    Get all users
- * @access  Public
+ * @access  Private (Super Admin only)
  */
-router.get("/get-all-users", UserController.getAllUsers);
+router.get("/get-all-users", auth("super_admin"), UserController.getAllUsers);
 
 /**
  * @route   GET /api/v1/user/me
@@ -56,11 +56,11 @@ router.patch(
 /**
  * @route   PATCH /api/v1/user/:id/role
  * @desc    Update user role
- * @access  Private (Admin)
+ * @access  Private (Super Admin only)
  */
 router.patch(
   "/:id/role",
-  auth(),
+  auth("super_admin"),
   validateRequest(UserValidation.updateUserRole),
   UserController.updateUserRole
 );

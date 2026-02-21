@@ -7,7 +7,7 @@ import { unlinkFileSync } from "../../shared/util/unlinkFile";
 
 const getAllUsers = async (query: Record<string, unknown>) => {
   const userQuery = new QueryBuilder(User.find(), query)
-    .search(["firstName", "lastName", "email"])
+    .search(["name", "email"])
     .filter()
     .sort()
     .paginate()
@@ -64,7 +64,10 @@ const updateUserActivationStatus = async (
 
   return user;
 };
-const updateUserRole = async (id: string, role: "USER" | "ADMIN") => {
+const updateUserRole = async (
+  id: string,
+  role: "contributor" | "reviewer" | "scholar" | "super_admin"
+) => {
   const user = await User.findByIdAndUpdate(
     id,
     { $set: { role } },
