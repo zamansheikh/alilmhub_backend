@@ -1,10 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",                         // Modern JS target (ES6+). You can also use ESNext if your runtime supports it.
-    "module": "CommonJS",                            // Use ES6 module system (import/export)
-    "rootDir": "./src",                         // Where your TypeScript files live
-    "outDir": "./dist",                         // Where the compiled JS goes
-    "moduleResolution": "node",                 // Resolves node-style imports
+    "module": "NodeNext",                       // Modern module system for Node.js
+    "moduleResolution": "NodeNext",             // Modern resolution for Node.js (TS 5.4+)
     "esModuleInterop": true,                    // Allows default import from CJS modules
     "forceConsistentCasingInFileNames": true,   // Prevents casing bugs in imports
     "strict": true,                             // Enable all strict type-checking
