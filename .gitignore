@@ -80,3 +80,4 @@ mongo-keyfile
 tmp/
 temp/
 alilmhub-backend-complete.postman_collection.json
+alilmhub-backend/node_modules/
