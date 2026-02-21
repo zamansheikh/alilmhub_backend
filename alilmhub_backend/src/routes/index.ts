@@ -4,6 +4,7 @@ import { AuthRoutes } from "../modules/auth/auth.route";
 import { ReferenceRoutes } from "../modules/references/references.route";
 import { TopicRoutes } from "../modules/topic/topic.route";
 import { DiscussionRoutes } from "../modules/discussions/discussions.route";
+import { DebateRoutes } from "../modules/debates/debates.route";
 
 const router: Router = express.Router();
 
@@ -27,6 +28,10 @@ const apiRoutes = [
   {
     path: "/discussion",
     route: DiscussionRoutes,
+  },
+  {
+    path: "/debate",
+    route: DebateRoutes,
   },
 ];
 

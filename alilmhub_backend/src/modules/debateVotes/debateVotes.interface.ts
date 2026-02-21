@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Model, Types, Document } from "mongoose";
 
 export type TDebateVotes = {
   debateId: Types.ObjectId;
@@ -7,3 +7,6 @@ export type TDebateVotes = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export interface IDebateVoteDocument extends TDebateVotes, Document {}
+export type DebateVoteModel = Model<IDebateVoteDocument>;

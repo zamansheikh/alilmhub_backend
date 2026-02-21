@@ -91,7 +91,7 @@ debateSchema.index({ status: 1 });
 debateSchema.index({ isDeleted: 1 });
 debateSchema.index({ createdAt: -1 });
 
-debateSchema.pre("save", async function (next) {
+debateSchema.pre("validate", async function (next) {
   // Prevent slug modification on existing documents
   if (!this.isNew && this.isModified("slug")) {
     throw new Error("Slug cannot be modified after creation.");

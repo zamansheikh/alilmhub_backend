@@ -3,6 +3,8 @@ import { DebateController } from "./debates.controller";
 import { DebateValidation } from "./debates.dto";
 import auth from "../../shared/middlewares/auth";
 import validateRequest from "../../shared/middlewares/validateRequest";
+import { DebateArgumentRoutes } from "../debateArguments/debateArguments.route";
+import { DebateVoteRoutes } from "../debateVotes/debateVotes.route";
 
 const router = express.Router();
 
@@ -119,5 +121,9 @@ router.patch(
   validateRequest(DebateValidation.updateStatus),
   DebateController.updateStatus
 );
+
+// Sub-resource routes
+router.use("/:slug/arguments", DebateArgumentRoutes);
+router.use("/:slug/vote", DebateVoteRoutes);
 
 export const DebateRoutes: Router = router;
