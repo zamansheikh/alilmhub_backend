@@ -1,10 +1,10 @@
-import express from "express";
+import { Router } from "express";
 import { DiscussionController } from "./discussions.controller";
 import { DiscussionValidation } from "./discussions.dto";
 import auth from "../../shared/middlewares/auth";
 import validateRequest from "../../shared/middlewares/validateRequest";
 
-const router = express.Router();
+const router: Router = Router();
 
 /**
  * @route   POST /api/v1/discussion
@@ -70,4 +70,4 @@ router.post(
   DiscussionController.addOpinion
 );
 
-export const DiscussionRoutes = router;
+export const DiscussionRoutes: Router = router;

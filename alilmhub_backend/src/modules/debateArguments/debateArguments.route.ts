@@ -1,10 +1,10 @@
-import express from "express";
+import { Router } from "express";
 import { DebateArgumentController } from "./debateArguments.controller";
 import { DebateArgumentValidation } from "./debateArguments.dto";
 import auth from "../../shared/middlewares/auth";
 import validateRequest from "../../shared/middlewares/validateRequest";
 
-const router = express.Router({ mergeParams: true });
+const router: Router = Router({ mergeParams: true });
 
 /**
  * @route   POST /api/v1/debate/:slug/arguments
@@ -51,4 +51,4 @@ router.delete("/:argumentId", auth(), DebateArgumentController.deleteArgument);
  */
 router.post("/:argumentId/vote", auth(), DebateArgumentController.voteArgument);
 
-export const DebateArgumentRoutes = router;
+export const DebateArgumentRoutes: Router = router;

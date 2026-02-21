@@ -1,10 +1,10 @@
-import express from "express";
+import { Router } from "express";
 import { DebateVoteController } from "./debateVotes.controller";
 import auth from "../../shared/middlewares/auth";
 import { z } from "zod";
 import validateRequest from "../../shared/middlewares/validateRequest";
 
-const router = express.Router({ mergeParams: true });
+const router: Router = Router({ mergeParams: true });
 
 const castVoteDto = z.object({
   body: z.object({
@@ -28,4 +28,4 @@ router.post("/", auth(), validateRequest(castVoteDto), DebateVoteController.cast
  */
 router.get("/", auth(), DebateVoteController.getUserVote);
 
-export const DebateVoteRoutes = router;
+export const DebateVoteRoutes: Router = router;
